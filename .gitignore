@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ospilot_data/
+demo/demo_workspace/
+.env
+*.pyc
+*.sqlite3
