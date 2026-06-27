@@ -1,15 +1,15 @@
-# OSPilot 2-Week Execution Plan
+# OS Pilot 2-Week Execution Plan
 
 ## Summary
 
-Build a polished MVP of **OSPilot**, a local-first AI system health agent for the Kaggle AI Agents capstone. The MVP will run on **macOS first**, use **Groq + deterministic fallback**, and assume **3-4 hours/day for 14 days**.
+Build a polished MVP of **OS Pilot**, a local-first AI system health agent for the Kaggle AI Agents capstone. The MVP will run on **macOS first**, use **Groq + deterministic fallback**, and assume **3-4 hours/day for 14 days**.
 
-The finished project must include a working Streamlit app, restricted MCP-style local tools, multi-agent orchestration, system/performance diagnosis, selected-folder scanning, developer junk detection, human approval, quarantine/restore, audit logs, tests, README, docs, demo workspace, Kaggle writeup, and a 5-minute video.
+The finished project must include a working JavaScript UI (React + Vite), FastAPI backend, restricted MCP-style local tools, multi-agent orchestration, structured system/performance diagnosis, selected-folder scanning, Home Scan through the user-owned home area, developer junk detection, project type detection, rebuildability scoring, recovery recipes, scan-delta memory, restore feedback learning, Safe Autopilot automation, human approval, quarantine/restore, audit logs, tests, README, docs, Kaggle writeup, and a 5-minute video.
 
 Core demo story:
 
 ```text
-Observe system health -> detect RAM/process pressure -> scan selected folder -> diagnose issues -> create maintenance plan -> validate safety -> user approves cleanup -> quarantine files -> generate report -> restore one item
+Observe system health -> detect RAM/process pressure -> scan a selected folder or Home Scan scope -> compare with previous snapshot -> diagnose issues with structured output -> create maintenance plan -> validate safety -> user approves cleanup -> revalidate path identity/live processes -> quarantine files -> generate report -> restore one item -> record feedback
 ```
 
 ## Key Implementation Plan
@@ -17,18 +17,20 @@ Observe system health -> detect RAM/process pressure -> scan selected folder -> 
 ### Foundation and Architecture
 
 - Create project structure under the workspace:
-  - `app.py`
+  - `api/main.py`
+  - `frontend/` (React + Vite + Tailwind)
   - `requirements.txt`
   - `.env.example`
   - `README.md`
   - `agents/`
   - `mcp_server/`
   - `core/`
-  - `ui/`
   - `demo/`
   - `tests/`
   - `docs/`
-- Use Python, Streamlit, `psutil`, Pydantic, SQLite, `python-dotenv`, and Groq SDK/client.
+- Use Python, FastAPI, `psutil`, Pydantic, SQLite, `python-dotenv`, and Groq SDK/client.
+- Use JavaScript (React + Vite + Tailwind) for the UI — not Streamlit.
+- OS Pilot runs on demand by default. Optional weekly scans can be enabled by the user through `launchd` on macOS or `cron` on Linux, and scheduled scans are report-only.
 - Use `.env` for `GROQ_API_KEY`; never commit secrets.
 - Add deterministic fallback mode for demo/tests when no Groq key is present.
 - Treat the MCP server as a restricted local tool layer. It may be implemented as Python tool modules plus a thin server wrapper; no arbitrary shell execution.
@@ -42,13 +44,13 @@ Define Pydantic models in `core/models.py`:
 - `ProcessInfo`
   - PID, name, CPU percent, memory MB, status, command preview.
 - `ScanItem`
-  - path, item type, size bytes, risk level, reason, recommended action.
+  - path, item type, size bytes, risk level, reason, recommended action, project root, project type, rebuildability, recovery recipe, evidence, path identity fields.
 - `MaintenanceAction`
-  - action id, action mode, path, reason, size bytes, risk level, approved boolean.
+  - action id, action mode, path, reason, size bytes, risk level, approved boolean, project root, project type, rebuildability, recovery recipe, evidence, path identity fields.
 - `MaintenancePlan`
-  - diagnosis summary, performance recommendations, cleanup actions, blocked actions, estimated recoverable bytes.
+  - diagnosis summary, structured diagnosis result, scan delta, performance recommendations, cleanup actions, blocked actions, estimated recoverable bytes.
 - `QuarantineRecord`
-  - id, original path, quarantine path, size bytes, reason, timestamp, restored boolean.
+  - id, original path, quarantine path, size bytes, reason, timestamp, restored boolean, artifact name, project type.
 - `AuditEvent`
   - event type, payload JSON, timestamp.
 
@@ -86,12 +88,15 @@ Implement restricted tools in `mcp_server/`:
   - `find_developer_junk(root_path)`
   - `scan_cache_folders(root_path)`
   - `estimate_cleanup_space(items)`
+  - `detect_project_type(project_root)`
+  - `detect_project_root(path)`
+  - `rebuildability_for(path, project_root, item_type)`
 - Safety tools:
   - `is_protected_path(path)`
   - `classify_file_risk(path)`
   - `validate_cleanup_plan(plan)`
 - Quarantine tools:
-  - `quarantine_item(path, reason)`
+  - `quarantine_item(path, reason, expected_identity, artifact_name, project_type)`
   - `restore_item(quarantine_id)`
   - `list_quarantine()`
 - Reporting tools:
@@ -140,11 +145,13 @@ Implement agents in `agents/`:
   - Produces structured observations.
 - `diagnosis_agent.py`
   - Uses Groq when available.
-  - Produces plain-language performance and storage diagnosis.
+  - Produces structured performance and storage diagnosis: summary, top risks, recommended scenario, urgency, confidence, and fallback flag.
   - Falls back to deterministic template summaries.
 - `maintenance_planner_agent.py`
   - Creates a structured `MaintenancePlan`.
   - Separates advisory performance recommendations from reversible cleanup actions.
+  - Prioritizes rebuildable project artifacts and includes recovery recipes.
+  - Marks stale, rebuildable, manifest-backed artifacts as Safe Autopilot eligible.
 - `risk_safety_agent.py`
   - Validates every action using hard-coded rules.
   - Blocks unsafe paths even if the LLM recommends them.
@@ -155,24 +162,25 @@ Implement agents in `agents/`:
 
 Groq usage:
 
-- Use Groq for diagnosis and maintenance-plan wording.
+- Use Groq for structured diagnosis wording.
 - Do not rely on Groq for safety.
+- Use redacted, aggregated observations rather than raw full paths or process command lines.
 - If `GROQ_API_KEY` is missing or the API fails, use deterministic fallback and show "Demo/Fallback mode active" in the app.
 
-### Streamlit App
+### JavaScript UI + FastAPI Backend
 
-Build Streamlit views:
+Build the frontend in `frontend/` and expose agent actions through `api/main.py`:
 
 - Dashboard:
-  - CPU, RAM, disk, health score, pressure score.
+  - CPU, RAM, disk, health score, pressure score, recoverable storage estimate.
   - Top CPU and memory processes.
   - Idle heavy app suggestions.
 - Scan view:
-  - Folder picker text input.
-  - Demo workspace button.
-  - Scan selected folder only.
+  - Folder picker input.
+  - Scan Folder action.
+  - Home Scan action that targets the user-owned home area while protected OS paths remain blocked.
 - Diagnosis view:
-  - Agent diagnosis summary.
+  - Structured agent diagnosis summary, top risks, urgency, confidence, scan delta, and recommended scenario.
   - Main storage and performance issues.
 - Approval queue:
   - List cleanup actions with path, size, reason, risk.
@@ -192,24 +200,18 @@ Important UI rule:
 - No automatic destructive action.
 - The app must clearly separate "Advice" from "Approved cleanup".
 - Quarantine, not delete.
+- No cleanup happens from a background scheduler. Users explicitly start cleanup sessions, and optional weekly scans are report-only.
 
-### Demo, Docs, and Submission Assets
+### Docs and Submission Assets
 
-- `demo/create_demo_workspace.py`
-  - Creates fake project folders:
-    - `old_react_app/node_modules/`
-    - `old_python_project/.venv/`
-    - `notebooks/.ipynb_checkpoints/`
-    - `package_build/dist/`
-    - `package_build/build/`
-    - `python_cache/__pycache__/`
-    - `temp_logs/`
-    - `large_files/`
-  - Uses generated dummy files so judges can safely test.
+- Real-data demo flow:
+  - Select a real folder or use Home Scan.
+  - Show empty states before any scan data exists.
+  - Keep protected paths blocked and cleanup approval explicit.
 - `docs/architecture.md`
   - Include multi-agent diagram and data flow.
 - `docs/safety_model.md`
-  - Explain no arbitrary shell, no permanent delete, selected-folder scanning, hard path blocks, approval, quarantine, restore.
+  - Explain no arbitrary shell, no permanent delete, selected-folder scanning, Home Scan, hard path blocks, path identity revalidation, approval, quarantine, restore, and feedback learning.
 - `docs/mcp_tools.md`
   - List every exposed tool and blocked behavior.
 - `docs/demo_script.md`
@@ -220,7 +222,8 @@ Important UI rule:
   - Architecture
   - Setup
   - `.env` usage
-  - Running demo mode
+  - Backend and frontend run commands
+  - Real folder and Home Scan behavior
   - Safety guarantees
   - Screenshots/GIF placeholders
   - Kaggle writeup link placeholder
@@ -245,9 +248,12 @@ Important UI rule:
 
 ### Day 3: File Scanner and Developer Junk Detector
 
-- Implement selected-folder scanner.
+- Implement selected-folder scanner and Home Scan scope.
 - Detect developer junk folders.
 - Detect large files above threshold.
+- Detect project type and manifest/lockfile evidence.
+- Generate rebuildability score and recovery recipe.
+- Require nearby project evidence before treating broad build/cache names as high-confidence rebuildable cleanup.
 - Estimate recoverable space.
 - Acceptance: scanner finds expected junk in a local test folder.
 
@@ -262,7 +268,7 @@ Important UI rule:
 ### Day 5: Quarantine and Restore
 
 - Implement SQLite quarantine database.
-- Implement move-to-quarantine with metadata.
+- Implement move-to-quarantine with metadata and execution-time identity checks.
 - Implement restore by quarantine id.
 - Implement list quarantine.
 - Acceptance: item can be quarantined and restored to original path.
@@ -277,38 +283,40 @@ Important UI rule:
 ### Day 7: Agent Orchestration
 
 - Implement monitor, diagnosis, planner, safety, execution, and report agents.
-- Add Groq diagnosis/planning call.
+- Add Groq structured diagnosis call with deterministic fallback.
 - Add deterministic fallback.
 - Acceptance: orchestrator produces a validated `MaintenancePlan` from metrics plus scan data.
 
-### Day 8: Streamlit Dashboard
+### Day 8: FastAPI Backend
 
-- Build main dashboard.
-- Show metrics, health score, top processes, pressure score.
-- Add selected-folder input and demo workspace trigger.
-- Acceptance: user can open app and see live system metrics.
+- Add REST endpoints for health, scan, scan progress, quarantine, restore, scheduler status, reports, and audit.
+- Acceptance: frontend can call `/api/scan` and receive a validated plan.
 
-### Day 9: Scan, Diagnosis, and Plan UI
+### Day 9: JavaScript Dashboard
 
-- Add scan results view.
-- Add diagnosis summary view.
-- Add maintenance plan view.
+- Build React UI with Vite and Tailwind.
+- Show metrics, health score, top processes, pressure score, recoverable storage.
+- Add selected-folder input and Home Scan trigger.
+- Acceptance: user can open the UI and see live system metrics.
+
+### Day 10: Scan, Diagnosis, and Plan UI
+
+- Add scan results, diagnosis, and maintenance plan views in the frontend.
 - Separate advisory recommendations from cleanup actions.
 - Acceptance: scanning demo folder produces visible plan.
 
-### Day 10: Approval, Quarantine, Restore UI
+### Day 11: Approval, Quarantine, Restore UI
 
-- Add approval queue.
-- Add checkboxes for cleanup actions.
-- Execute approved quarantine actions.
+- Add approval queue with checkboxes.
+- Execute approved quarantine actions through the API.
 - Add quarantine list and restore button.
 - Acceptance: demo folder item can be quarantined and restored from UI.
 
-### Day 11: Demo Workspace and End-to-End Polish
+### Day 11: End-to-End Polish
 
-- Finish demo workspace generator.
-- Add reset demo workspace option.
-- Add fallback sample data if live Groq fails.
+- Polish the real-data scan flow.
+- Verify empty states do not show fake/demo data.
+- Add deterministic fallback structured diagnosis if live Groq fails.
 - Polish copy and labels.
 - Acceptance: full demo flow works on macOS without touching system folders.
 
@@ -355,14 +363,16 @@ Run these before final submission:
   - `is_protected_path()` blocks system paths.
   - `validate_cleanup_plan()` rejects unsafe actions.
   - scanner detects all demo junk folders.
-  - quarantine preserves metadata.
+  - quarantine preserves artifact/project metadata.
+  - path identity and live process checks run immediately before execution.
   - restore returns file/folder to original path.
   - fallback mode works without Groq key.
 - Manual app tests:
-  - App starts with `streamlit run app.py`.
+  - Backend starts with `uvicorn api.main:app --reload`.
+  - Frontend starts with `npm run dev` in `frontend/`.
   - Dashboard shows metrics.
-  - Demo workspace can be generated.
   - Selected-folder scan works.
+  - Home Scan maps to the user-owned home area and does not scan protected OS roots.
   - Agent plan is created.
   - Advisory actions are not executable.
   - Cleanup actions require approval.
@@ -387,9 +397,10 @@ Run these before final submission:
 - Time budget: **3-4 hours/day for 14 days**.
 - LLM: **Groq API key**, stored in `.env`.
 - Fallback: deterministic diagnosis/planning so demos and tests work without live API access.
-- UI: Streamlit, not React, to maximize completion speed.
-- Execution safety: quarantine only; no permanent delete.
+- UI: React + Vite + Tailwind with FastAPI backend, not Streamlit, to deliver a polished judge-facing demo.
+- Scheduling: optional weekly report-only scan through `cron` or `launchd`; user approval is still required for cleanup.
+- Execution safety: quarantine only; no automatic permanent delete; execution revalidates path identity, symlink status, and live process links.
 - Process handling: advisory only; no automatic process killing.
-- Scanning: selected-folder only; no default full-disk scan.
+- Scanning: selected-folder scan plus Home Scan through the user-owned home area; no unsafe raw full-disk scan.
 - Submission goal: Kaggle Concierge Agents track.
 - First implementation task after leaving Plan Mode: create `plan.md` with this plan, then scaffold the project.
