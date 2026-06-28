@@ -65,7 +65,7 @@ Optional Groq setup in `.env`:
 
 ```text
 GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.1-8b-instant
+GROQ_MODEL=gpt-oss-20b
 ```
 
 If no Groq key is configured, or if the model call fails, OS Pilot runs in deterministic fallback mode. Safety validation never depends on Groq.
