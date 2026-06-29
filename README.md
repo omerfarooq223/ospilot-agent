@@ -28,8 +28,12 @@ A normal cleaner finds junk. OS Pilot understands developer workspaces:
 
 ## Architecture
 
-```text
-React UI -> FastAPI -> Multi-agent orchestration -> Restricted MCP tools -> Quarantine + Audit
+```mermaid
+graph LR
+    UI[React UI] --> API[FastAPI]
+    API --> Agents[Multi-agent orchestration]
+    Agents --> Tools[Restricted MCP tools]
+    Tools --> Audit[Quarantine & Audit]
 ```
 
 Main pieces:

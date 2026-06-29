@@ -22,7 +22,7 @@ WEEKLY_SCAN_SCRIPT = BASE_DIR / "scripts" / "weekly_scan.py"
 LAUNCH_AGENT_LABEL = "com.ospilot.weekly-scan"
 DB_PATH = DATA_DIR / "ospilot.sqlite3"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "gpt-oss-20b").strip()
 
 
 def ensure_data_dirs() -> None:
