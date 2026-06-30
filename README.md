@@ -29,11 +29,16 @@ A normal cleaner finds junk. OS Pilot understands developer workspaces:
 ## Architecture
 
 ```mermaid
-graph LR
-    UI[React UI] --> API[FastAPI]
-    API --> Agents[Multi-agent orchestration]
-    Agents --> Tools[Restricted MCP tools]
-    Tools --> Audit[Quarantine & Audit]
+flowchart LR
+    User["User selects real repo folder"] --> UI["React / Tauri UI"]
+    UI --> API["FastAPI scan session"]
+    API --> Agents["Monitor, Diagnosis, Planner, Safety agents"]
+    Agents --> Plan["Scenarios + approval queue"]
+    Plan --> Gate{"Human approves?"}
+    Gate -- "No" --> Report["Advice + dry-run report"]
+    Gate -- "Yes" --> Tools["Restricted MCP tools"]
+    Tools --> Quarantine["Quarantine + restore"]
+    Quarantine --> Audit["Audit log + final report"]
 ```
 
 Main pieces:
@@ -46,7 +51,6 @@ Main pieces:
 - Rebuildability-aware project scanner and recovery recipes
 - Workspace profiler, scan-delta memory, dormancy ranking, scenario planner, process linkage, and before/after simulator
 - SQLite audit, quarantine, feedback, and scan snapshot storage
-- Demo workspace generator
 
 OS Pilot is **on-demand by default**. Users can optionally enable a **weekly read-only scan** from the UI, which installs a local scheduler (`launchd` on macOS or `cron` on Linux). Scheduled scans write human-readable reports and never quarantine or delete files automatically.
 
@@ -138,6 +142,10 @@ python scripts/weekly_scan.py
 5. Click **Home Scan** to scan the user-owned home area (`~`) while continuing to skip protected OS folders.
 
 The scan uses a single-pass optimised walker that prunes junk directories (`node_modules`, `.venv`, `__pycache__`, etc.) before recursing into them, making it practical on large trees with hundreds of thousands of files.
+
+### Submission Demo Path
+
+For the Kaggle capstone video, the recommended demo is a real local GitHub repositories folder with accumulated `node_modules`, virtual environments, caches, and build outputs. This shows OS Pilot working on meaningful local data. The demo should show the scan result, workspace profile, rebuildability evidence, scenario estimates, approval step, quarantine, restore, and final report.
 
 ## Plan & Approval UI
 

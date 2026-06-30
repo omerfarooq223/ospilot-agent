@@ -6,7 +6,7 @@
 
 The agent observes system health, analyzes CPU/RAM/process pressure, scans only user-approved folders, detects developer junk such as `node_modules`, `.venv`, `__pycache__`, `.pytest_cache`, `.next`, `.turbo`, Rust `target`, Java `.gradle`, `dist`, and `build`, identifies project type and manifest evidence, scores rebuildability, then creates a structured diagnosis and human-readable maintenance plan with recovery recipes. It never kills processes or deletes files directly. Approved cleanup items are moved into a quarantine folder with audit logs, scan-time identity checks, restore support, and feedback learning.
 
-The project is designed for Kaggle's AI Agents capstone as a practical, safe, demo-friendly agent system that demonstrates:
+The project is designed for Kaggle's AI Agents capstone as a practical, safe, real-data agent system that demonstrates:
 
 * Multi-agent reasoning
 * Restricted local MCP tools
@@ -18,7 +18,7 @@ The project is designed for Kaggle's AI Agents capstone as a practical, safe, de
 * Local scan memory for growth/shrinkage deltas
 * Safe Autopilot automation for stale rebuildable artifacts
 * Rollback through quarantine
-* A public, reproducible real-data demo flow
+* A real local repository scan flow with reproducible safety controls
 
 ## 2. One-Line Pitch
 
@@ -46,7 +46,7 @@ OS Pilot solves this by combining real system data with agentic diagnosis, safet
 
 The hackathon MVP focuses on:
 
-**Students and developers on macOS or Windows who want to understand laptop slowdowns, identify heavy background processes, and safely recover storage from old projects, caches, and temporary files without accidentally deleting important work.**
+**Students and developers on macOS first, with Linux-compatible scheduling support, who want to understand laptop slowdowns, identify heavy local processes, and safely recover storage from old projects, caches, and temporary files without accidentally deleting important work.**
 
 ## 5. Recommended Track
 
@@ -134,15 +134,15 @@ The MVP is focused so it can be completed, tested, documented, and demonstrated 
    * Gives non-destructive recommendations such as closing browser tabs, stopping Docker Desktop, or quitting inactive IDEs.
    * Keeps process actions advisory in the MVP.
 
-4. **Startup and Background Item Review**
-   * Shows common startup/background items in read-only mode where available.
-   * Explains which items may contribute to slower boot or background load.
-   * Does not disable startup items automatically in the MVP.
+4. **Process Pressure Review**
+   * Shows top CPU and memory processes from the current machine.
+   * Explains which active apps may contribute to resource pressure.
+   * Keeps process handling advisory and never kills processes automatically.
 
 5. **User-Selected Folder Scan**
    * The app scans only folders selected by the user.
    * No full-drive scan by default.
-   * Demo mode creates a safe synthetic folder for judging.
+   * The submission demo scans a real local GitHub repositories folder with large rebuildable artifacts.
 
 6. **Developer Junk Detector**
    * `node_modules`
@@ -219,14 +219,15 @@ To keep the project safe and achievable, the hackathon version will not include:
 * Antivirus claims
 * Deep system repair
 * Silent update installation
-* Full background daemon with admin privileges (no `cron` or `launchd` in MVP — OS Pilot runs on demand when you open the app)
+* Full privileged background daemon
+* Automatic background cleanup from `cron` or `launchd`; optional scheduled scans are report-only and user-enabled
 * Full-drive scanning by default
 * Editing system folders
 * Running arbitrary shell commands
 
 ## 9. Demo Scenario
 
-The demo will use a generated safe folder that simulates a cluttered developer laptop.
+The demo will use a real local GitHub repositories folder that contains accumulated `node_modules`, virtual environments, Python caches, and build artifacts. This shows OS Pilot handling a meaningful real workspace while still requiring approval before any file moves.
 
 Demo flow:
 
@@ -234,7 +235,7 @@ Demo flow:
 1. User opens OS Pilot dashboard.
 2. OS Pilot shows CPU, RAM, disk, and process metrics.
 3. OS Pilot flags high memory pressure and heavy idle apps.
-4. User selects a real folder or chooses Home Scan for the user-owned home scope.
+4. User selects the local GitHub repositories folder or chooses Home Scan for the user-owned home scope.
 5. MCP scan tools detect recoverable storage.
 6. Diagnosis agent returns structured output explaining performance, storage pressure, top risks, urgency, recommended scenario, and confidence.
 7. Maintenance planner creates a safe plan.
@@ -338,16 +339,7 @@ macOS:
 /private
 ```
 
-Windows:
-
-```text
-C:\Windows
-C:\Program Files
-C:\Program Files (x86)
-C:\Users\<user>\AppData\System-protected paths
-```
-
-The LLM cannot override these restrictions.
+Windows protected-path constants are included for future compatibility, but the hackathon demo is macOS-first. The LLM cannot override these restrictions.
 
 ### 10.5 Execution Agent
 
@@ -445,8 +437,9 @@ OS Pilot's safety model is central to the project.
 7. **Rollback support**
    * Quarantined files can be restored.
 
-8. **Demo mode**
-   * Judges can test safely without touching personal files.
+8. **Real-data dry run before action**
+   * Judges can review the diagnosis, scenario estimates, and approval queue before any quarantine action occurs.
+   * Cleanup remains reversible through quarantine and restore.
 
 ## 13. Tech Stack
 
@@ -498,10 +491,6 @@ ospilot/
 │   ├── quarantine_db.py
 │   └── scanner.py
 │
-├── demo/
-│   ├── create_demo_workspace.py
-│   └── sample_scan_results.json
-│
 ├── tests/
 │   ├── test_safety_rules.py
 │   ├── test_quarantine_restore.py
@@ -543,15 +532,15 @@ OS Pilot can demonstrate success through:
 * Reject protected paths at the MCP tool layer.
 * Use structured JSON plans instead of free-form commands.
 
-### Risk 3: Cross-Platform Complexity
+### Risk 3: Platform Scope
 
-* Keep MVP features mostly cross-platform through Python and `psutil`.
+* Keep the hackathon demo macOS-first with Linux scheduling support where available.
 * Avoid platform-specific repair tools in the hackathon build.
-* Treat Windows/macOS repair checks as future work.
+* Treat Windows support and OS repair checks as future work.
 
 ### Risk 4: Judge Machine Safety
 
-* Prefer real local data and clear empty states over fake UI data.
+* Prefer real local data, clear empty states, and dry-run review over fake UI data.
 * Require user-scoped scanning and protected-path blocking.
 * Provide dry-run output before quarantine.
 
@@ -571,7 +560,7 @@ The final submission should include:
 5. Local MCP server code
 6. Multi-agent orchestration code
 7. Safety model documentation
-8. Real-data scan flow with safe empty states
+8. Real GitHub-repository scan flow with safe empty states
 9. Tests for safety rules and quarantine restore
 10. YouTube video under 5 minutes
 11. Kaggle Writeup under 2,500 words
@@ -581,7 +570,7 @@ The final submission should include:
 The video should stay focused and practical:
 
 1. **Problem**
-   * "Developer laptops slow down and fill up because of heavy background apps, old dependencies, caches, and virtual environments. Normal cleaners find junk; OS Pilot understands which artifacts are rebuildable."
+   * "Developer laptops slow down and fill up because of heavy apps, old dependencies, caches, and virtual environments. Normal cleaners find junk; OS Pilot understands which artifacts are rebuildable."
 
 2. **Why Agents**
    * "A script can list files or processes, but an agent can connect system pressure, project manifests, rebuildability, scan history, recovery recipes, safety validation, and reporting."
@@ -593,7 +582,7 @@ The video should stay focused and practical:
    * Explain no arbitrary shell, no permanent delete, human approval, quarantine, restore, audit logs.
 
 5. **Demo**
-   * Select a real folder or use Home Scan.
+   * Select the local GitHub repositories folder or use Home Scan.
    * Show RAM/process pressure.
    * Scan Folder.
    * Show structured diagnosis, scan delta, workspace intelligence, rebuildability, and maintenance plan.
@@ -607,7 +596,7 @@ The video should stay focused and practical:
 
 ## 19. Future Work
 
-After the MVP, OS Pilot could add duplicate file review, optional update awareness, startup item controls, verify-only system repair checks, optional scheduled scans via `cron` or `launchd` (with explicit user opt-in), desktop packaging, advanced scoring, and classroom/lab maintenance mode.
+After the MVP, OS Pilot could add duplicate file review, optional update awareness, startup item controls, verify-only system repair checks, Windows support, desktop packaging polish, advanced scoring, and classroom/lab maintenance mode.
 
 ## 20. Final Product Statement
 

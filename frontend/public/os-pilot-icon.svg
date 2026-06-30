@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">OS Pilot icon</title>
+  <desc id="desc">A local-first system pilot mark with a compass needle, protective ring, and clean storage base.</desc>
+  <defs>
+    <linearGradient id="bg" x1="140" y1="80" x2="880" y2="940" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1414"/>
+      <stop offset="0.52" stop-color="#111d1d"/>
+      <stop offset="1" stop-color="#050808"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="256" y1="208" x2="776" y2="824" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8af7ee"/>
+      <stop offset="0.5" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#20b7aa"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="300" y1="144" x2="760" y2="836" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#1284c7"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="322" fill="none" stroke="#273938" stroke-width="42"/>
+  <circle cx="512" cy="512" r="258" fill="none" stroke="url(#mint)" stroke-width="30" stroke-linecap="round" stroke-dasharray="520 220"/>
+  <path d="M512 160v86M512 778v86M160 512h86M778 512h86" stroke="#7f9290" stroke-width="24" stroke-linecap="round"/>
+  <g filter="url(#softShadow)">
+    <path d="M624 238 442 534 260 786l252-182 296-182c42-26 28-91-21-98l-107-16-16-107c-7-49-72-63-98-21Z" fill="url(#sky)"/>
+    <path d="M624 238 512 604 260 786l182-252 182-296Z" fill="url(#mint)"/>
+    <circle cx="512" cy="512" r="72" fill="#101919" stroke="#e8fffb" stroke-width="24"/>
+    <circle cx="512" cy="512" r="25" fill="#5eead4"/>
+  </g>
+  <path d="M312 724h400c28 0 52 24 52 52v22c0 28-24 52-52 52H312c-28 0-52-24-52-52v-22c0-28 24-52 52-52Z" fill="#172424" stroke="#5eead4" stroke-width="24"/>
+  <path d="M340 787h250" stroke="#e8fffb" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="690" cy="787" r="22" fill="#5eead4"/>
+</svg>

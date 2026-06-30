@@ -31,7 +31,6 @@ from core.user_preferences import (
     scan_history,
 )
 from core.weekly_report import list_weekly_reports, run_weekly_scan
-from demo.create_demo_workspace import create_demo_workspace
 from mcp_server.safety_rules import is_protected_path
 
 
@@ -269,18 +268,6 @@ def health() -> dict[str, object]:
         "weekly_scan_enabled": status["enabled"],
         "scheduler_supported": status["supported"],
     }
-
-
-@app.post("/api/demo/workspace")
-def create_demo() -> dict[str, str]:
-    path = create_demo_workspace(reset=True)
-    return {"path": str(path)}
-
-
-@app.post("/api/demo/kaggle", response_model=ScanResponse)
-def kaggle_demo() -> ScanResponse:
-    path = create_demo_workspace(reset=True)
-    return build_scan_result(path, min_size_mb=30)
 
 
 @app.post("/api/report/export")
