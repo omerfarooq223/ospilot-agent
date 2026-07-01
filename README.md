@@ -58,6 +58,38 @@ OS Pilot also includes **Safe Autopilot**. After a scan, the backend automatical
 
 For a desktop-style experience, OS Pilot also includes a Tauri shell so the React UI can open in its own app window instead of a browser tab.
 
+## Course Concepts Demonstrated
+
+OS Pilot demonstrates more than the minimum three course concepts required by the capstone rubric:
+
+| Concept | Where it is demonstrated |
+| --- | --- |
+| Agent / multi-agent system | Code: `agents/orchestrator_agent.py` coordinates Monitor, Diagnosis, Maintenance Planner, Risk & Safety, and Report agents. |
+| MCP server / restricted tools | Code: `mcp_server/server.py` exposes a narrow allowlist of local tools instead of arbitrary shell access. |
+| Antigravity | Video: launch the backend and frontend from Antigravity's terminal before switching to the app demo. |
+| Security features | Code and video: server-side scan sessions, protected-path blocking, symlink blocking, identity revalidation, active-process blocks, quarantine, restore, and audit logs. |
+| Deployability | Video and docs: local web run commands plus the Tauri desktop shell documented in `docs/desktop_app.md` and `docs/deployability.md`. |
+| Agent skills | Code: `agents/skills.py` names the observation, diagnosis, planning, safety, and reporting skills used by the multi-agent pipeline. |
+
+See [Course Concepts](docs/course_concepts.md) for the judge-facing mapping.
+
+## Project Structure
+
+```text
+.
+├── agents/             # AI agents for monitoring, diagnosis, planning, and safety
+├── api/                # FastAPI backend endpoints and session management
+├── core/               # Core logic for workspace profiling, scanning, and metrics
+├── docs/               # Project documentation (architecture, safety model, etc.)
+├── frontend/           # React + Vite + Tailwind UI
+├── mcp_server/         # Restricted MCP-style Python tools
+├── scripts/            # Utility scripts (e.g., weekly_scan.py)
+├── tests/              # Test suite for backend and agent safety
+├── config.py           # Application configuration
+├── README.md           # This file
+└── requirements.txt    # Python dependencies
+```
+
 ## Setup
 
 ### Backend
@@ -87,7 +119,7 @@ npm install
 
 ## Run
 
-Start the backend and frontend in two separate terminals.
+Start the backend and frontend in two separate terminals. For the submission video, open these terminals inside **Antigravity** so the video demonstrates that course concept directly.
 
 Terminal 1 — API:
 
@@ -143,6 +175,16 @@ python scripts/weekly_scan.py
 
 The scan uses a single-pass optimised walker that prunes junk directories (`node_modules`, `.venv`, `__pycache__`, etc.) before recursing into them, making it practical on large trees with hundreds of thousands of files.
 
+### Optional Demo Workspace
+
+If you want a safe reproducible scan target instead of using personal folders, create the bundled demo workspace:
+
+```bash
+python demo/create_demo_workspace.py
+```
+
+The script creates small fake Node, Python, notebook, cache, build, and large-file artifacts under `demo/demo_workspace/`. You can then scan that folder from the UI.
+
 ### Submission Demo Path
 
 For the Kaggle capstone video, the recommended demo is a real local GitHub repositories folder with accumulated `node_modules`, virtual environments, caches, and build outputs. This shows OS Pilot working on meaningful local data. The demo should show the scan result, workspace profile, rebuildability evidence, scenario estimates, approval step, quarantine, restore, and final report.
@@ -151,17 +193,15 @@ For the Kaggle capstone video, the recommended demo is a real local GitHub repos
 
 After a scan the **Plan & Approval** tab shows:
 
-- **Count summary** — total items found, broken down into junk/cleanup, advisory, and blocked.
 - **Workspace profile** — detected project types, manifest markers, artifact counts, candidate space, and linked live process signals.
 - **Structured agent diagnosis** — summary, top risks, urgency level, recommended scenario, confidence, and previous-scan delta when available.
 - **Cleanup scenarios** — Conservative, Balanced, and Deep Review estimates that can be loaded into the approval queue.
 - **Search/filter** — narrow large result sets by folder, reason, or risk.
-- **Sort controls** — switch between **Size ↓** (GB → MB → KB) and **Folder A–Z** within each section.
-- **Rebuildability-aware sorting** — prioritize artifacts that can be recreated from project evidence.
-- **Agent reasoning** — expand any item to see project type, manifest evidence, rebuildability, recovery recipe, and safety reasoning.
+- **Cleanup action table** — path, size, risk, confidence, reason, status, and approval checkboxes.
+- **Rebuildability-aware planning** — reasons include project type, manifest evidence, rebuildability, and recovery recipe.
 - **Safe Autopilot** — one-click quarantine for backend-approved stale rebuildable artifacts only.
-- **Before/after simulation** — scenario estimates are included in the dashboard and exported report before any files move.
-- **Progressive disclosure** — lists open with 10 items; click **Show 20 more** to load the next batch, or **Show all** to expand everything at once.
+- **Manual Review** — advisory and blocked/protected items are separated from reversible cleanup actions.
+- **Before/after reporting** — report export includes scenario estimates, quarantine counts, recovery recipes, and audit summary.
 
 In the app:
 
@@ -201,11 +241,15 @@ In the app:
 - [Architecture](docs/architecture.md)
 - [Safety Model](docs/safety_model.md)
 - [MCP Tools](docs/mcp_tools.md)
-- [Demo Script](docs/demo_script.md)
+- [Course Concepts](docs/course_concepts.md)
+- [Deployability](docs/deployability.md)
+- [Writeup](docs/writeup.md)
 - [Desktop App](docs/desktop_app.md)
 
 ## Kaggle Submission Links
 
-- Kaggle writeup: TBD
-- YouTube demo: TBD
-- Screenshots/GIF: TBD
+Fill these in after publishing the final submission materials:
+
+- Kaggle writeup: see [Writeup](docs/writeup.md)
+- YouTube demo:
+- Screenshots/GIF:
