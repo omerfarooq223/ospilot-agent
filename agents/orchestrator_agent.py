@@ -7,6 +7,7 @@ from agents.maintenance_planner_agent import create_plan
 from agents.monitor_agent import observe
 from agents.report_agent import generate_report
 from agents.risk_safety_agent import validate_plan
+from agents.skills import AGENT_SKILL_CHAIN
 from core.audit_log import write_audit_log
 from core.models import ActionMode, DiagnosisResult, MaintenancePlan, Observation, QuarantineRecord, ScanDelta
 from core.scan_history_db import compute_delta
@@ -70,6 +71,7 @@ def build_plan(
             "scenario_count": len(plan.cleanup_scenarios),
             "active_process_links": len(observation.process_links),
             "has_scan_delta": scan_delta is not None,
+            "agent_skill_chain": AGENT_SKILL_CHAIN,
         },
     )
     return observation, plan, diagnosis_result
