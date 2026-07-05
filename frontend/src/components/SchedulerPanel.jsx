@@ -56,18 +56,18 @@ export default function SchedulerPanel({
           </p>
         </div>
         <span
-          className={`rounded-full border px-3 py-1 text-xs font-medium ${
-            status.enabled
+          className={`mono flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${status.enabled
               ? "border-mint-500/30 bg-mint-500/10 text-mint-200"
-              : "border-white/10 bg-white/5 text-slate-300"
-          }`}
+              : "border-ink-600 bg-ink-850 text-slate-400"
+            }`}
         >
+          <span className={`channel-dot ${status.enabled ? "bg-mint-300" : "bg-ink-600"}`} />
           {status.enabled ? "Weekly scan enabled" : "Weekly scan off"}
         </span>
       </div>
 
       {!status.supported ? (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <p className="rounded-md border border-[#eab766]/30 bg-[#eab766]/10 px-4 py-3 text-sm text-[#f6cf98]">
           Weekly scheduling is currently supported on macOS (launchd) and Linux (cron) only.
         </p>
       ) : (
@@ -76,7 +76,7 @@ export default function SchedulerPanel({
             <label className="block">
               <span className="mb-2 block text-sm text-slate-400">Folder to scan weekly</span>
               <input
-                className="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-sm text-white outline-none ring-mint-500/40 focus:ring-2"
+                className="field"
                 value={scheduleFolder}
                 onChange={(event) => setScheduleFolder(event.target.value)}
                 placeholder="/Users/you/projects"
@@ -85,7 +85,7 @@ export default function SchedulerPanel({
             <label className="block">
               <span className="mb-2 block text-sm text-slate-400">Day of week</span>
               <select
-                className="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-sm text-white outline-none"
+                className="field"
                 value={weekday}
                 onChange={(event) => setWeekday(Number(event.target.value))}
               >
@@ -102,7 +102,7 @@ export default function SchedulerPanel({
                 type="number"
                 min="0"
                 max="23"
-                className="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-sm text-white outline-none"
+                className="field mono"
                 value={hour}
                 onChange={(event) => setHour(Number(event.target.value))}
               />
@@ -113,7 +113,7 @@ export default function SchedulerPanel({
                 type="number"
                 min="0"
                 max="59"
-                className="w-full rounded-xl border border-white/10 bg-ink-800 px-4 py-3 text-sm text-white outline-none"
+                className="field mono"
                 value={minute}
                 onChange={(event) => setMinute(Number(event.target.value))}
               />
@@ -148,14 +148,14 @@ export default function SchedulerPanel({
               className="btn-secondary"
               disabled={loading || !scheduleFolder.trim()}
               onClick={() =>
-                  onRunNow({
-                    folders: [scheduleFolder.trim()],
-                    weekday,
-                    hour,
-                    minute,
-                    min_size_mb: minSizeMb,
-                  })
-                }
+                onRunNow({
+                  folders: [scheduleFolder.trim()],
+                  weekday,
+                  hour,
+                  minute,
+                  min_size_mb: minSizeMb,
+                })
+              }
             >
               Run report now
             </button>
@@ -166,15 +166,15 @@ export default function SchedulerPanel({
 
           {status.enabled ? (
             <p className="mt-4 text-sm text-slate-400">
-              Scheduled for {status.schedule_label} via {status.platform}. Installed:{" "}
+              Scheduled for <span className="mono">{status.schedule_label}</span> via {status.platform}. Installed:{" "}
               {status.installed ? "yes" : "pending"}
             </p>
           ) : null}
 
           {status.latest_report ? (
-            <div className="mt-5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+            <div className="mt-5 rounded-md border border-ink-700 bg-ink-850 px-4 py-3 text-sm text-slate-300">
               Latest report:{" "}
-              <code className="text-mint-300">{status.latest_report.path}</code>
+              <code className="mono text-mint-300">{status.latest_report.path}</code>
               <p className="mt-2 text-xs text-slate-500">
                 Open the HTML file in your browser for the easiest read.
               </p>
@@ -184,7 +184,7 @@ export default function SchedulerPanel({
           {status.recent_reports?.length ? (
             <div className="mt-4">
               <h3 className="mb-2 text-sm font-medium text-slate-300">Recent reports</h3>
-              <ul className="space-y-1 text-xs text-slate-500">
+              <ul className="mono space-y-1 text-xs text-slate-500">
                 {status.recent_reports.slice(0, 6).map((report) => (
                   <li key={report.path}>
                     {report.name} · {report.path}

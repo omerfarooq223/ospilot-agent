@@ -1,7 +1,7 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
-  browseFolders,
   cancelScanJob,
   disableWeeklyScan,
   enableWeeklyScan,
@@ -9,7 +9,6 @@ import {
   getScanJob,
   getHealth,
   getSchedulerStatus,
-  ignoreFolder,
   listAudit,
   listIgnoredFolders,
   listQuarantine,
@@ -40,6 +39,7 @@ const TABS = [
 
 const USER_NAME = "Muhammad Omer Farooq";
 const USER_INITIALS = "MO";
+const MESSAGE_DISMISS_MS = 5000;
 
 function Icon({ name }) {
   const paths = {
@@ -88,6 +88,16 @@ function App() {
   const [scanHistory, setScanHistory] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState(() => localStorage.getItem("os-pilot-theme") || "dark");
+  const activeScanJobRef = useRef(null);
+
+  function resetScanProgress() {
+    setScanLoading(false);
+    setScanJobId(null);
+    setScanProgress(0);
+    setScanMessage("");
+    setScanTargetLabel("");
+    activeScanJobRef.current = null;
+  }
 
   async function refreshSideData() {
     const [records, events, scheduler, ignored, history] = await Promise.all([
@@ -118,7 +128,7 @@ function App() {
     getHealth()
       .then((health) => setFallback(Boolean(health.fallback_mode)))
       .catch(() => setFallback(true));
-    refreshSideData().catch(() => {});
+    refreshSideData().catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -126,21 +136,50 @@ function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  useEffect(() => {
+    if (!message) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setMessage((current) => (current === message ? "" : current));
+    }, MESSAGE_DISMISS_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
+
   async function handleScan() {
     setError("");
     setMessage("");
     setTab("scan");
-    setScanLoading(true);
-    setScanProgress(10);
-    setScanTargetLabel(folder);
-    setScanMessage(`Preparing scan for ${folder}...`);
+    let selectedFolder = "";
+
     try {
-      const started = await startScan(folder, minSizeMb);
+      const picked = await open({
+        directory: true,
+        multiple: false,
+        title: "Choose a folder to scan",
+      });
+      if (!picked) {
+        setMessage("Folder scan cancelled.");
+        return;
+      }
+      selectedFolder = Array.isArray(picked) ? picked[0] : picked;
+      setFolder(selectedFolder);
+    } catch (err) {
+      setError("The Mac folder picker is available in the desktop app. Launch OS Pilot with npm run desktop:dev.");
+      return;
+    }
+
+    setScanLoading(true);
+    setScanProgress(5);
+    setScanTargetLabel(selectedFolder);
+    setScanMessage(`Preparing scan for ${selectedFolder}...`);
+    try {
+      const started = await startScan(selectedFolder, minSizeMb);
       setScanJobId(started.job_id);
+      activeScanJobRef.current = started.job_id;
+      setScanProgress(10);
       pollScanJob(started.job_id);
     } catch (err) {
       setError(err.message);
-      setScanLoading(false);
+      resetScanProgress();
     } finally {
       // completion happens in pollScanJob
     }
@@ -150,24 +189,27 @@ function App() {
     setFolder("~");
     setError("");
     setTab("scan");
-    setMessage("Home scan uses your user-owned home area and skips protected OS folders.");
+    setMessage("Whole PC scan uses your user-owned space and skips OS protected folders.");
     setScanLoading(true);
-    setScanProgress(10);
-    setScanTargetLabel("Home scan: user-owned home area (~)");
-    setScanMessage("Preparing home scan...");
+    setScanProgress(5);
+    setScanTargetLabel("Whole PC scan: user-owned space (~)");
+    setScanMessage("Preparing whole PC scan...");
     try {
       const started = await startScan("~", minSizeMb);
       setScanJobId(started.job_id);
+      activeScanJobRef.current = started.job_id;
+      setScanProgress(10);
       pollScanJob(started.job_id);
     } catch (err) {
       setError(err.message);
-      setScanLoading(false);
+      resetScanProgress();
     }
   }
 
   async function pollScanJob(jobId) {
     try {
       const job = await getScanJob(jobId);
+      if (activeScanJobRef.current !== jobId) return;
       setScanProgress(job.progress || 10);
       setScanMessage(job.message || "Scanning...");
       if (job.status === "completed") {
@@ -178,28 +220,25 @@ function App() {
         setReport(null);
         setMessage("Scan complete. Review the plan below.");
         setTab("plan");
-        setScanLoading(false);
-        setScanJobId(null);
+        resetScanProgress();
         await refreshSideData();
         return;
       }
       if (job.status === "failed") {
         setError(job.error || "Scan failed.");
-        setScanLoading(false);
-        setScanJobId(null);
+        resetScanProgress();
         return;
       }
       if (job.status === "cancelled") {
         setMessage("Scan cancelled.");
-        setScanLoading(false);
-        setScanJobId(null);
+        resetScanProgress();
         return;
       }
       window.setTimeout(() => pollScanJob(jobId), 700);
     } catch (err) {
+      if (activeScanJobRef.current !== jobId) return;
       setError(err.message);
-      setScanLoading(false);
-      setScanJobId(null);
+      resetScanProgress();
     }
   }
 
@@ -211,19 +250,7 @@ function App() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setScanLoading(false);
-      setScanJobId(null);
-    }
-  }
-
-  async function handleIgnoreFolder(path) {
-    setError("");
-    try {
-      const result = await ignoreFolder(path);
-      setIgnoredFolders(result.folders || []);
-      setMessage("Folder added to ignore list.");
-    } catch (err) {
-      setError(err.message);
+      resetScanProgress();
     }
   }
 
@@ -387,29 +414,31 @@ function App() {
 
   return (
     <div className={`app-frame theme-${theme}`}>
-      <div className="grid min-h-screen grid-cols-1 bg-[#101111] text-slate-200 lg:h-screen lg:grid-cols-[250px_1fr]">
-        <aside className="flex border-b border-[#35403f] bg-[#1b1d1d] lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
-          <div className="hidden px-8 py-8 lg:block">
+      <div className="grid min-h-screen grid-cols-1 bg-ink-950 text-slate-200 lg:h-screen lg:grid-cols-[248px_1fr]">
+        <aside className="flex border-b border-ink-700 bg-ink-900 lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
+          <div className="hidden px-7 py-7 lg:block">
             <div className="flex items-center gap-3">
-              <span className="text-mint-400"><Icon name="broom" /></span>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ink-700 bg-ink-850 text-mint-300">
+                <Icon name="broom" />
+              </span>
               <div>
-                <h1 className="font-display text-xl font-bold text-mint-300">OS Pilot</h1>
-                <p className="text-sm text-slate-400">Local-First Utility</p>
+                <h1 className="font-display text-lg font-bold tracking-tight text-white">OS Pilot</h1>
+                <p className="mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Local-First Utility</p>
               </div>
             </div>
           </div>
+          <div className="tick-rule mx-7 hidden lg:block" />
 
-          <nav className="flex w-full gap-1 overflow-x-auto px-3 py-3 lg:block lg:space-y-1 lg:px-0 lg:py-5">
+          <nav className="flex w-full gap-1 overflow-x-auto px-3 py-3 lg:mt-2 lg:block lg:space-y-1 lg:px-4 lg:py-5">
             {TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setTab(item.id)}
-                className={`flex min-w-max items-center gap-3 border-l-4 px-4 py-3 text-left text-sm font-semibold transition lg:w-full lg:min-w-0 lg:px-8 ${
-                  tab === item.id
-                    ? "border-mint-300 bg-[#233031] text-mint-300"
-                    : "border-transparent text-slate-300 hover:bg-[#232626]"
-                }`}
+                className={`flex min-w-max items-center gap-3 rounded-md border-l-2 px-4 py-2.5 text-left text-sm font-semibold transition lg:w-full lg:min-w-0 ${tab === item.id
+                    ? "border-mint-300 bg-mint-300/10 text-mint-200"
+                    : "border-transparent text-slate-400 hover:bg-ink-850 hover:text-slate-200"
+                  }`}
               >
                 <Icon name={item.icon} />
                 {item.label}
@@ -417,7 +446,12 @@ function App() {
             ))}
           </nav>
 
-          <div className="mt-auto hidden border-t border-[#35403f] p-6 lg:block">
+          <div className="mt-auto hidden space-y-4 border-t border-ink-700 p-6 lg:block">
+            <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="channel-dot bg-mint-300" /> Safe</span>
+              <span className="flex items-center gap-1.5"><span className="channel-dot" style={{ background: "#eab766" }} /> Caution</span>
+              <span className="flex items-center gap-1.5"><span className="channel-dot" style={{ background: "#ff8f83" }} /> Risk</span>
+            </div>
             <button type="button" className="btn-primary w-full" onClick={() => setTab("scan")}>
               <Icon name="plus" /> New Scan
             </button>
@@ -425,10 +459,10 @@ function App() {
         </aside>
 
         <main className="min-w-0 lg:h-screen lg:overflow-y-auto">
-          <header className="sticky top-0 z-10 border-b border-[#35403f] bg-[#101111]/95 backdrop-blur">
-            <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-4 px-5 py-4 xl:px-8">
+          <header className="sticky top-0 z-10 border-b border-ink-700 bg-ink-950/95 backdrop-blur">
+            <div className="flex min-h-[68px] flex-wrap items-center justify-between gap-4 px-5 py-4 xl:px-8">
               <form className="relative min-w-[260px] flex-1 lg:max-w-xl" onSubmit={handleSearchSubmit}>
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                   <Icon name="search" />
                 </span>
                 <input
@@ -438,7 +472,7 @@ function App() {
                   onChange={(event) => setSearchQuery(event.target.value)}
                 />
               </form>
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4">
                 <button
                   type="button"
                   className="btn-secondary min-h-10 px-3"
@@ -448,7 +482,7 @@ function App() {
                   <Icon name={theme === "dark" ? "sun" : "moon"} />
                   <span className="hidden sm:inline">{theme === "dark" ? "Light" : "Dark"}</span>
                 </button>
-                <div className="hidden h-9 border-l border-[#35403f] sm:block" />
+                <div className="hidden h-8 border-l border-ink-700 sm:block" />
                 <button
                   type="button"
                   className="flex items-center gap-3 text-left"
@@ -459,12 +493,12 @@ function App() {
                   }}
                 >
                   <div className="hidden text-right sm:block">
-                    <p className="font-bold text-white">{USER_NAME}</p>
-                    <p className="text-xs font-semibold uppercase text-slate-400">
+                    <p className="text-sm font-bold text-white">{USER_NAME}</p>
+                    <p className="mono text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                       {fallback ? "NODE_01_LOCAL" : "System Active"}
                     </p>
                   </div>
-                  <div className="grid h-10 w-10 place-items-center rounded-full bg-[#1284c7] text-sm font-bold text-white">
+                  <div className="grid h-9 w-9 place-items-center rounded-md border border-ink-700 bg-ink-850 text-sm font-bold text-mint-200">
                     {USER_INITIALS}
                   </div>
                 </button>
@@ -474,22 +508,22 @@ function App() {
 
           <div className="px-5 py-6 xl:px-8">
             {message ? (
-              <div className="mb-4 border border-mint-500/30 bg-mint-500/10 px-4 py-3 text-sm text-mint-100">
+              <div className="mb-4 rounded-md border border-mint-500/30 bg-mint-500/10 px-4 py-3 text-sm text-mint-100">
                 {message}
               </div>
             ) : null}
             {error ? (
-              <div className="mb-4 border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              <div className="mb-4 rounded-md border border-[#ff8f83]/30 bg-[#ff8f83]/10 px-4 py-3 text-sm text-[#ffd7d1]">
                 {error}
               </div>
             ) : null}
 
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="font-display text-3xl font-bold text-white">{contentTitle}</h2>
-                <p className="mt-1 text-lg text-slate-300">
-                  {tab === "overview" ? "Local-First / Secure (No Cloud Uploads)" : null}
-                  {tab === "scan" ? "Scan one folder or your user-owned whole-computer space." : null}
+                <h2 className="font-display text-2xl font-bold tracking-tight text-white">{contentTitle}</h2>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  {tab === "overview" ? "Local-first / secure — no cloud uploads." : null}
+                  {tab === "scan" ? "Scan a specific folder or your user-owned whole-computer space." : null}
                   {tab === "plan" ? "Simulation mode: nothing moves until you approve quarantine." : null}
                   {tab === "quarantine" ? "Safe storage for flagged files awaiting review." : null}
                   {tab === "report" ? "Performance metrics, exports, and audit history." : null}
@@ -502,17 +536,17 @@ function App() {
                     Refresh Data
                   </button>
                   <button type="button" className="btn-primary" onClick={handleWholePcScan}>
-                    Home Scan
+                    Scan Whole PC
                   </button>
                 </div>
               ) : null}
             </div>
+            <div className="tick-rule mb-6" />
 
             {tab === "overview" ? <Dashboard observation={observation} plan={plan} scanHistory={scanHistory} /> : null}
             {tab === "scan" ? (
               <ScanPanel
                 folder={folder}
-                setFolder={setFolder}
                 minSizeMb={minSizeMb}
                 setMinSizeMb={setMinSizeMb}
                 fallback={fallback}
@@ -523,9 +557,7 @@ function App() {
                 onScan={handleScan}
                 onWholePcScan={handleWholePcScan}
                 onCancelScan={handleCancelScan}
-                browseFolders={browseFolders}
                 ignoredFolders={ignoredFolders}
-                onIgnoreFolder={handleIgnoreFolder}
                 onUnignoreFolder={handleUnignoreFolder}
                 scanHistory={scanHistory}
               />
@@ -557,7 +589,7 @@ function App() {
                 onEnable={handleEnableWeeklyScan}
                 onDisable={handleDisableWeeklyScan}
                 onRunNow={handleRunWeeklyScanNow}
-                onRefresh={() => refreshSideData().catch(() => {})}
+                onRefresh={() => refreshSideData().catch(() => { })}
               />
             ) : null}
           </div>

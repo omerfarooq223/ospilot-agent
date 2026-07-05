@@ -10,10 +10,10 @@ function riskLabel(action) {
 
 function scenarioTone(index) {
   return [
-    "border-mint-300 shadow-[0_0_0_1px_rgba(94,234,212,0.35)]",
-    "border-sky-300 shadow-[0_0_0_1px_rgba(125,211,252,0.35)]",
-    "border-[#ffaea8]",
-  ][index] || "border-[#303a39]";
+    "border-mint-300 shadow-[0_0_0_1px_rgba(63,214,187,0.3)]",
+    "border-sky-300 shadow-[0_0_0_1px_rgba(125,211,252,0.3)]",
+    "border-[#ff8f83] shadow-[0_0_0_1px_rgba(255,143,131,0.3)]",
+  ][index] || "border-ink-700";
 }
 
 export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, loading }) {
@@ -52,7 +52,7 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
   if (!plan) {
     return (
       <section className="panel p-8 text-center">
-        <p className="text-slate-300">Scan a folder to generate diagnosis and maintenance plan.</p>
+        <p className="text-slate-400">Scan a folder to generate diagnosis and maintenance plan.</p>
       </section>
     );
   }
@@ -60,47 +60,47 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
   const scenarios = plan.cleanup_scenarios?.length
     ? plan.cleanup_scenarios
     : [
-        {
-          scenario_id: "conservative",
-          name: "Conservative",
-          description: "Safe Mode",
-          estimated_recoverable_bytes: lowActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
-          item_count: lowActions.length,
-          confidence: lowActions.length ? Math.round(lowActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / lowActions.length) : 0,
-          risk: "Low",
-          action_ids: lowActions.map((action) => action.action_id),
-        },
-        {
-          scenario_id: "balanced",
-          name: "Balanced",
-          description: "Recommended",
-          estimated_recoverable_bytes: balancedActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
-          item_count: balancedActions.length,
-          confidence: balancedActions.length ? Math.round(balancedActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / balancedActions.length) : 0,
-          risk: "Medium",
-          action_ids: balancedActions.map((action) => action.action_id),
-        },
-        {
-          scenario_id: "deep",
-          name: "Deep Review",
-          description: "Manual Required",
-          estimated_recoverable_bytes: cleanupActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
-          item_count: cleanupActions.length,
-          confidence: cleanupActions.length ? Math.round(cleanupActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / cleanupActions.length) : 0,
-          risk: cleanupActions.some((action) => action.risk_level === "High") ? "High" : "Medium",
-          action_ids: cleanupActions.map((action) => action.action_id),
-        },
-      ];
+      {
+        scenario_id: "conservative",
+        name: "Conservative",
+        description: "Safe Mode",
+        estimated_recoverable_bytes: lowActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
+        item_count: lowActions.length,
+        confidence: lowActions.length ? Math.round(lowActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / lowActions.length) : 0,
+        risk: "Low",
+        action_ids: lowActions.map((action) => action.action_id),
+      },
+      {
+        scenario_id: "balanced",
+        name: "Balanced",
+        description: "Recommended",
+        estimated_recoverable_bytes: balancedActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
+        item_count: balancedActions.length,
+        confidence: balancedActions.length ? Math.round(balancedActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / balancedActions.length) : 0,
+        risk: "Medium",
+        action_ids: balancedActions.map((action) => action.action_id),
+      },
+      {
+        scenario_id: "deep",
+        name: "Deep Review",
+        description: "Manual Required",
+        estimated_recoverable_bytes: cleanupActions.reduce((sum, action) => sum + (action.size_bytes || 0), 0),
+        item_count: cleanupActions.length,
+        confidence: cleanupActions.length ? Math.round(cleanupActions.reduce((sum, action) => sum + (action.confidence || 0), 0) / cleanupActions.length) : 0,
+        risk: cleanupActions.some((action) => action.risk_level === "High") ? "High" : "Medium",
+        action_ids: cleanupActions.map((action) => action.action_id),
+      },
+    ];
   const autopilotCount = cleanupActions.filter((action) => action.automation_eligible).length;
 
   return (
     <section className="space-y-6">
-      <div className="panel border-[#5b4228] bg-[#2a2117] p-5">
+      <div className="panel rounded-md border-[#5b4228] bg-[#221c14] p-5">
         <div className="flex gap-4">
-          <span className="text-2xl text-[#ffd09d]">!</span>
+          <span className="channel-dot mt-1.5 shrink-0" style={{ background: "#eab766" }} />
           <div>
-            <h3 className="font-display text-lg font-bold text-[#ffd09d]">Simulation Mode Active</h3>
-            <p className="max-w-4xl text-sm font-semibold leading-relaxed text-slate-300">
+            <h3 className="font-display text-lg font-bold text-[#f6cf98]">Simulation Mode Active</h3>
+            <p className="max-w-4xl text-sm font-medium leading-relaxed text-slate-400">
               The following items are projected cleanup targets. No files will be moved or deleted until you explicitly approve them and trigger the quarantine process.
             </p>
           </div>
@@ -115,52 +115,52 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
             <button
               key={scenario.scenario_id || scenario.name}
               type="button"
-              className={`panel min-h-56 border p-5 text-left transition hover:bg-[#222525] ${scenarioTone(index)}`}
+              className={`panel min-h-56 border p-5 text-left transition hover:bg-ink-850 ${scenarioTone(index)}`}
               onClick={() => scenario.action_ids?.length && setSelected(new Set(scenario.action_ids))}
             >
               <div className="mb-7 flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-display text-xl font-bold text-white">{scenario.name}</h3>
-                  <p className={`mt-2 text-sm font-bold uppercase ${index === 2 ? "text-[#ffaea8]" : index === 1 ? "text-sky-300" : "text-mint-300"}`}>
+                  <p className={`mt-2 text-xs font-bold uppercase tracking-wide ${index === 2 ? "text-[#ffbcb2]" : index === 1 ? "text-sky-300" : "text-mint-300"}`}>
                     {scenario.description || (index === 1 ? "Recommended" : "Safe Mode")}
                   </p>
                 </div>
-                <span className="mono rounded bg-[#303737] px-3 py-1 font-bold text-mint-300">
+                <span className="mono rounded bg-ink-700 px-3 py-1 font-bold text-mint-300">
                   {formatBytes(scenario.estimated_recoverable_bytes || 0)}
                 </span>
               </div>
-              <dl className="space-y-3 text-sm font-semibold">
+              <dl className="space-y-3 text-sm font-medium">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-slate-400">Item Count</dt>
+                  <dt className="text-slate-500">Item Count</dt>
                   <dd className="text-white">{scenario.item_count || 0} files</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-slate-400">Risk Level</dt>
-                  <dd className={risk === "High" ? "text-[#ffaea8]" : risk === "Medium" ? "text-[#ffd09d]" : "text-mint-300"}>{risk}</dd>
+                  <dt className="text-slate-500">Risk Level</dt>
+                  <dd className={risk === "High" ? "text-[#ffbcb2]" : risk === "Medium" ? "text-[#f6cf98]" : "text-mint-300"}>{risk}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-slate-400">Confidence</dt>
+                  <dt className="text-slate-500">Confidence</dt>
                   <dd className="text-white">{confidence}%</dd>
                 </div>
               </dl>
-              <div className="mt-7 h-1.5 bg-[#303737]">
-                <div className={`h-full ${index === 2 ? "bg-[#ffaea8]" : index === 1 ? "bg-sky-300" : "bg-mint-300"}`} style={{ width: `${confidence}%` }} />
+              <div className="mt-7 h-1.5 rounded-full bg-ink-700">
+                <div className={`h-full rounded-full ${index === 2 ? "bg-[#ff8f83]" : index === 1 ? "bg-sky-300" : "bg-mint-300"}`} style={{ width: `${confidence}%` }} />
               </div>
             </button>
           );
         })}
       </div>
 
-      <div className="panel border-sky-300/30 bg-sky-500/10 p-4">
-        <p className="text-sm font-semibold leading-relaxed text-slate-200">
+      <div className="panel rounded-md border-sky-300/25 bg-sky-500/10 p-4">
+        <p className="text-sm font-medium leading-relaxed text-slate-300">
           Scenario cards are alternatives, not additive totals. Choose Conservative, Balanced, or Deep Review as a package; do not add the three numbers together. The scan's potential gain is the backend's overall recoverable estimate for the latest plan.
         </p>
       </div>
 
       <div className="panel flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="flex flex-wrap items-center gap-5">
-          <span className="text-base font-bold text-slate-300">{selected.size} items selected</span>
-          <button type="button" className="font-bold text-mint-300" onClick={selectAllVisible}>
+          <span className="text-sm font-bold text-slate-300">{selected.size} items selected</span>
+          <button type="button" className="text-sm font-bold text-mint-300" onClick={selectAllVisible}>
             Select all visible
           </button>
           <input
@@ -182,7 +182,7 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
 
       <div className="table-shell overflow-x-auto">
         <table className="w-full min-w-[980px] text-left">
-          <thead className="bg-[#2a2c2c] text-sm uppercase text-slate-300">
+          <thead className="bg-ink-850 text-xs uppercase text-slate-500">
             <tr>
               <th className="w-14 px-5 py-4">
                 <span className="sr-only">Selected</span>
@@ -200,7 +200,7 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
               filteredCleanup.map((action) => {
                 const checked = selected.has(action.action_id);
                 return (
-                  <tr key={action.action_id} className="border-t border-[#252c2b] align-middle">
+                  <tr key={action.action_id} className="border-t border-ink-700 align-middle">
                     <td className="px-5 py-5">
                       <input
                         type="checkbox"
@@ -216,10 +216,10 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
                     <td className="px-5 py-5">
                       <span className={`status-pill ${riskClass(action.risk_level)}`}>{riskLabel(action)}</span>
                     </td>
-                    <td className="px-5 py-5 text-lg font-bold text-white">{action.confidence || "--"}%</td>
-                    <td className="max-w-[260px] px-5 py-5 text-base font-semibold text-slate-300">{action.reason}</td>
+                    <td className="mono px-5 py-5 text-lg font-bold text-white">{action.confidence || "--"}%</td>
+                    <td className="max-w-[260px] px-5 py-5 text-sm font-medium text-slate-400">{action.reason}</td>
                     <td className="px-5 py-5">
-                      <span className={`h-2.5 w-2.5 rounded-full ${action.linked_processes?.length ? "bg-[#ffaea8]" : "bg-mint-300"} inline-block`} />
+                      <span className={`channel-dot ${action.linked_processes?.length ? "" : "bg-mint-300"}`} style={action.linked_processes?.length ? { background: "#ff8f83" } : undefined} />
                     </td>
                   </tr>
                 );
@@ -240,45 +240,45 @@ export default function PlanView({ plan, onQuarantine, onAutopilotQuarantine, lo
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="font-display text-xl font-bold text-white">Workspace Intelligence</h3>
             {plan.diagnosis_result?.urgency_level && (
-              <span className={`status-pill ${plan.diagnosis_result.urgency_level === 'high' ? 'bg-[#ffaea8] text-black' : plan.diagnosis_result.urgency_level === 'low' ? 'bg-mint-300 text-black' : 'bg-sky-300 text-black'}`}>
+              <span className={`status-pill ${plan.diagnosis_result.urgency_level === 'high' ? 'bg-[#ff8f83] text-black' : plan.diagnosis_result.urgency_level === 'low' ? 'bg-mint-300 text-black' : 'bg-sky-300 text-black'}`}>
                 {plan.diagnosis_result.urgency_level.toUpperCase()} URGENCY
               </span>
             )}
           </div>
-          <p className="text-sm leading-relaxed text-slate-300">
+          <p className="text-sm leading-relaxed text-slate-400">
             {plan.diagnosis_result?.summary || plan.workspace_profile?.summary || plan.diagnosis_summary}
           </p>
           {plan.scan_delta?.summary && (
-            <p className="mt-3 text-sm font-semibold leading-relaxed text-sky-300">
+            <p className="mt-3 text-sm font-medium leading-relaxed text-sky-300">
               ↳ {plan.scan_delta.summary}
             </p>
           )}
           {plan.diagnosis_result?.top_risks?.length > 0 && (
             <ul className="mt-4 space-y-2">
               {plan.diagnosis_result.top_risks.map((risk, i) => (
-                <li key={i} className="flex gap-2 text-sm font-semibold text-[#ffaea8]">
-                  <span>!</span> <span>{risk}</span>
+                <li key={i} className="flex gap-2 text-sm font-medium text-[#ffbcb2]">
+                  <span className="channel-dot mt-1.5 shrink-0" style={{ background: "#ff8f83" }} /> <span>{risk}</span>
                 </li>
               ))}
             </ul>
           )}
           <div className="mt-5 flex flex-wrap gap-2">
             {(plan.workspace_profile?.markers || []).slice(0, 14).map((marker) => (
-              <span key={marker} className="status-pill border border-[#303a39] bg-[#242727] text-slate-300">{marker}</span>
+              <span key={marker} className="status-pill border border-ink-700 bg-ink-850 text-slate-400">{marker}</span>
             ))}
           </div>
         </div>
         <div className="panel p-5">
           <h3 className="mb-3 font-display text-xl font-bold text-white">Manual Review</h3>
-          <p className="mb-3 text-sm text-slate-400">{advisoryActions.length} advisory items and {blockedActions.length} blocked/protected items.</p>
+          <p className="mb-3 text-sm text-slate-500">{advisoryActions.length} advisory items and {blockedActions.length} blocked/protected items.</p>
           <div className="max-h-64 space-y-2 overflow-y-auto">
             {[...advisoryActions, ...blockedActions].slice(0, 8).map((action) => (
-              <div key={action.action_id} className="border border-[#303a39] bg-[#202222] p-3">
+              <div key={action.action_id} className="rounded-md border border-ink-700 bg-ink-850 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="mono max-w-md break-all text-sm font-bold text-white">{action.path || action.reason}</p>
                   <span className={`status-pill ${riskClass(action.risk_level)}`}>{riskLabel(action)}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">{action.reason}</p>
+                <p className="mt-1 text-xs text-slate-500">{action.reason}</p>
               </div>
             ))}
             {!allActions.length ? <p className="text-sm text-slate-500">Run a scan to populate review details.</p> : null}
