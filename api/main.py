@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from html import escape
 from io import BytesIO
+import json
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
@@ -12,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from agents.orchestrator_agent import build_plan, execute_approved_actions, run_report
-from config import fallback_mode_enabled
+from config import REPORTS_DIR, ensure_data_dirs, fallback_mode_enabled
 from core.audit_log import list_audit_events
 from core.models import DiagnosisResult, MaintenancePlan, Observation, QuarantineRecord
 from core.audit_log import write_audit_log
@@ -258,6 +259,12 @@ class ReportExportRequest(BaseModel):
     format: str = "html"
 
 
+class ReportFileResponse(BaseModel):
+    path: str
+    filename: str
+    format: str
+
+
 @app.get("/api/health")
 def health() -> dict[str, object]:
     status = scheduler_status()
@@ -270,10 +277,58 @@ def health() -> dict[str, object]:
     }
 
 
-@app.post("/api/report/export")
-def export_report(body: ReportExportRequest) -> Response:
-    generated = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M %Z")
-    report = body.report or {}
+def _report_generated_label() -> str:
+    return datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M %Z")
+
+
+def _report_filename(format_name: str) -> str:
+    stamp = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d-%H%M%S")
+    return f"ospilot-report-{stamp}.{format_name}"
+
+
+def _human_label(key: str) -> str:
+    return key.replace("_", " ").title()
+
+
+def _compact_value(value: object) -> str:
+    if value is None:
+        return "None"
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, indent=2, default=str)
+    return str(value)
+
+
+def _short_value(value: object, *, max_chars: int = 900) -> str:
+    text = _compact_value(value)
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 24].rstrip() + "\n... truncated in summary"
+
+
+def _friendly_report_value(value: object) -> str:
+    if value is None:
+        return "None"
+    if isinstance(value, list):
+        if not value:
+            return "None"
+        if all(not isinstance(item, (dict, list, tuple)) for item in value):
+            return ", ".join(str(item) for item in value)
+        lines: list[str] = []
+        for index, item in enumerate(value, start=1):
+            if isinstance(item, dict):
+                parts = [f"{_human_label(str(key))}: {val}" for key, val in item.items()]
+                lines.append(f"{index}. " + "; ".join(parts))
+            else:
+                lines.append(f"{index}. {item}")
+        return "\n".join(lines)
+    if isinstance(value, dict):
+        if not value:
+            return "None"
+        return "\n".join(f"{_human_label(str(key))}: {val}" for key, val in value.items())
+    return str(value)
+
+
+def _build_report_html(report: dict[str, object], generated: str) -> str:
     lines = [
         "<!doctype html><html><head><meta charset='utf-8'><title>OSPilot Report</title>",
         "<style>body{font-family:Inter,system-ui,sans-serif;max-width:900px;margin:32px auto;padding:0 20px;line-height:1.6;background:#0d1420;color:#e2e8f0}h1,h2{color:#5eead4}.card{border:1px solid #334155;border-radius:12px;padding:16px;margin:12px 0;background:#111827}code{color:#67e8f9}</style>",
@@ -283,48 +338,416 @@ def export_report(body: ReportExportRequest) -> Response:
     ]
     for key, value in report.items():
         lines.append("<div class='card'>")
-        lines.append(f"<h2>{escape(str(key).replace('_', ' ').title())}</h2>")
-        lines.append(f"<pre>{escape(str(value))}</pre>")
+        lines.append(f"<h2>{escape(_human_label(str(key)))}</h2>")
+        lines.append(f"<pre>{escape(_compact_value(value))}</pre>")
         lines.append("</div>")
     lines.append("</body></html>")
-    html = "\n".join(lines)
-    if body.format == "html":
-        return Response(
-            content=html,
-            media_type="text/html",
-            headers={"Content-Disposition": "attachment; filename=ospilot-report.html"},
-        )
-    if body.format == "pdf":
-        try:
-            from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import getSampleStyleSheet
-            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-        except ImportError as exc:
-            raise HTTPException(status_code=500, detail="PDF export requires reportlab. Run pip install -r requirements.txt.") from exc
+    return "\n".join(lines)
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, title="OSPilot Report")
-        styles = getSampleStyleSheet()
-        story = [
-            Paragraph("OSPilot Scan Report", styles["Title"]),
-            Paragraph(f"Generated: {generated}", styles["Normal"]),
-            Spacer(1, 12),
-        ]
-        for key, value in report.items():
-            story.append(Paragraph(escape(str(key).replace("_", " ").title()), styles["Heading2"]))
-            story.append(Paragraph(escape(str(value)), styles["BodyText"]))
-            story.append(Spacer(1, 8))
-        doc.build(story)
-        return Response(
-            content=buffer.getvalue(),
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=ospilot-report.pdf"},
+
+def _build_report_pdf(report: dict[str, object], generated: str) -> bytes:
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.platypus import (
+            HRFlowable,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
         )
-    return Response(
-        content="\n".join(str(item) for item in report.items()),
-        media_type="text/plain",
-        headers={"Content-Disposition": "attachment; filename=ospilot-report.txt"},
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail="PDF export requires reportlab. Run pip install -r requirements.txt.") from exc
+
+    PAGE_W, _ = A4
+    MARGIN = 1.55 * cm
+    content_w = PAGE_W - (2 * MARGIN)
+
+    INK = colors.HexColor("#17211f")
+    MUTED = colors.HexColor("#60716d")
+    SOFT = colors.HexColor("#f5faf8")
+    LINE = colors.HexColor("#cbdad6")
+    MINT = colors.HexColor("#0f9f87")
+    MINT_DARK = colors.HexColor("#0b6f61")
+    SKY = colors.HexColor("#2f8ec9")
+    AMBER = colors.HexColor("#a36a00")
+    WHITE = colors.white
+
+    base = getSampleStyleSheet()["Normal"]
+    regular_font = "Helvetica"
+    bold_font = "Helvetica-Bold"
+    font_candidates = [
+        (
+            "OSPilotSans",
+            Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+            "OSPilotSans-Bold",
+            Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
+        ),
+        (
+            "OSPilotSans",
+            Path("/Library/Fonts/Arial.ttf"),
+            "OSPilotSans-Bold",
+            Path("/Library/Fonts/Arial Bold.ttf"),
+        ),
+        (
+            "OSPilotSans",
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+            "OSPilotSans-Bold",
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        ),
+        (
+            "OSPilotSans",
+            Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+            "OSPilotSans-Bold",
+            Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+        ),
+    ]
+    for regular_name, regular_path, bold_name, bold_path in font_candidates:
+        if regular_path.exists() and bold_path.exists():
+            pdfmetrics.registerFont(TTFont(regular_name, str(regular_path)))
+            pdfmetrics.registerFont(TTFont(bold_name, str(bold_path)))
+            regular_font = regular_name
+            bold_font = bold_name
+            break
+
+    def ps(name: str, **kw) -> ParagraphStyle:
+        return ParagraphStyle(name, parent=base, **kw)
+
+    style_title = ps("Title", fontName=bold_font, fontSize=24, leading=29, textColor=INK, alignment=TA_LEFT, spaceAfter=3)
+    style_kicker = ps("Kicker", fontName=bold_font, fontSize=8.5, leading=11, textColor=MINT_DARK, alignment=TA_LEFT)
+    style_body = ps("Body", fontName=regular_font, fontSize=8.7, leading=12.5, textColor=INK, alignment=TA_LEFT)
+    style_small = ps("Small", fontName=regular_font, fontSize=7.4, leading=10, textColor=MUTED, alignment=TA_LEFT)
+    style_label = ps("Label", fontName=bold_font, fontSize=7.4, leading=9.5, textColor=MUTED, alignment=TA_LEFT)
+    style_section = ps("Section", fontName=bold_font, fontSize=12.5, leading=16, textColor=INK, alignment=TA_LEFT, spaceBefore=12, spaceAfter=5)
+    style_stat = ps("Stat", fontName=bold_font, fontSize=20, leading=23, textColor=MINT_DARK, alignment=TA_CENTER)
+    style_stat_label = ps("StatLabel", fontName=bold_font, fontSize=7.5, leading=9.5, textColor=MUTED, alignment=TA_CENTER)
+    style_stat_note = ps("StatNote", fontName=regular_font, fontSize=7.2, leading=9.2, textColor=MUTED, alignment=TA_CENTER)
+    style_table_header = ps("TableHeader", fontName=bold_font, fontSize=7.2, leading=9, textColor=WHITE, alignment=TA_LEFT)
+
+    def para(text: object, style: ParagraphStyle = style_body) -> Paragraph:
+        cleaned = escape(_short_value(_friendly_report_value(text))).replace("\n", "<br/>")
+        return Paragraph(cleaned, style)
+
+    def stat_card(label: str, value: object, note: str = "") -> list[Paragraph]:
+        return [
+            Paragraph(escape(label.upper()), style_stat_label),
+            Paragraph(escape(str(value)), style_stat),
+            Paragraph(escape(note), style_stat_note),
+        ]
+
+    recovered = report.get("recovered", "0 B")
+    quarantined = report.get("quarantined_count", 0)
+    health_before = report.get("before_health_score", "--")
+    health_after = report.get("after_health_score", "--")
+    pressure_before = report.get("before_pressure_score", "--")
+    pressure_after = report.get("after_pressure_score", "--")
+    session_id = report.get("session_id", "Not recorded")
+    scan_folder = report.get("folder", "Not recorded")
+
+    extra_fields = [
+        (str(key), value)
+        for key, value in report.items()
+        if key not in {
+            "recovered",
+            "quarantined_count",
+            "before_health_score",
+            "after_health_score",
+            "before_pressure_score",
+            "after_pressure_score",
+            "session_id",
+            "folder",
+            "recovered_bytes",
+        }
+    ]
+
+    def draw_page_chrome(canvas, doc_obj):
+        canvas.saveState()
+        width, height = doc_obj.pagesize
+        canvas.setFillColor(WHITE)
+        canvas.rect(0, 0, width, height, fill=1, stroke=0)
+
+        canvas.setFillColor(MINT)
+        canvas.rect(0, height - 18, width, 18, fill=1, stroke=0)
+        canvas.setFillColor(MINT_DARK)
+        canvas.rect(0, height - 21, width, 3, fill=1, stroke=0)
+
+        canvas.setFillColor(MUTED)
+        canvas.setFont(regular_font, 7.5)
+        canvas.drawString(MARGIN, 21, "OS Pilot - Local report. No cloud uploads.")
+        canvas.drawRightString(width - MARGIN, 21, f"Page {doc_obj.page}")
+        canvas.setStrokeColor(LINE)
+        canvas.setLineWidth(0.5)
+        canvas.line(MARGIN, 34, width - MARGIN, 34)
+        canvas.restoreState()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        title="OS Pilot Scan Report",
+        author="OS Pilot",
+        leftMargin=MARGIN,
+        rightMargin=MARGIN,
+        topMargin=1.25 * cm,
+        bottomMargin=1.35 * cm,
     )
+
+    story = [
+        Paragraph("OS PILOT", style_kicker),
+        Paragraph("System Scan Report", style_title),
+        Paragraph(f"Generated {escape(generated)}", style_small),
+        Spacer(1, 0.25 * cm),
+        HRFlowable(width="100%", thickness=1.2, color=MINT, spaceAfter=12),
+    ]
+
+    stat_width = content_w / 4
+    stats = [[
+        stat_card("Recovered", recovered),
+        stat_card("Quarantined", quarantined, "items"),
+        stat_card("Health", f"{health_after}%", f"before {health_before}%"),
+        stat_card("Pressure", pressure_after, f"before {pressure_before}"),
+    ]]
+    stat_table = Table(stats, colWidths=[stat_width] * 4)
+    stat_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), SOFT),
+        ("BOX", (0, 0), (-1, -1), 0.7, LINE),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, LINE),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 11),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 11),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.extend([stat_table, Spacer(1, 0.35 * cm)])
+
+    story.append(Paragraph("Scan Details", style_section))
+    detail_rows = [
+        [para("Session ID", style_label), para(session_id)],
+        [para("Scan Folder", style_label), para(scan_folder)],
+        [para("Generated", style_label), para(generated)],
+    ]
+    detail_table = Table(detail_rows, colWidths=[3.3 * cm, content_w - 3.3 * cm])
+    detail_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), SOFT),
+        ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+        ("INNERGRID", (0, 0), (-1, -1), 0.45, LINE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.extend([detail_table, Spacer(1, 0.25 * cm)])
+
+    scenario_rows = []
+    for scenario in report.get("cleanup_scenarios") or []:
+        if not isinstance(scenario, dict):
+            continue
+        scenario_rows.append([
+            para(scenario.get("name", "Scenario")),
+            para(scenario.get("estimated_recoverable", "--")),
+            para(scenario.get("item_count", "--")),
+            para(scenario.get("confidence", "--")),
+        ])
+    if scenario_rows:
+        story.append(Paragraph("Cleanup Scenarios", style_section))
+        scenario_table = Table(
+            [[
+                Paragraph("Scenario", style_table_header),
+                Paragraph("Recoverable", style_table_header),
+                Paragraph("Items", style_table_header),
+                Paragraph("Confidence", style_table_header),
+            ], *scenario_rows],
+            colWidths=[content_w * 0.38, content_w * 0.24, content_w * 0.16, content_w * 0.22],
+            repeatRows=1,
+        )
+        scenario_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), MINT_DARK),
+            ("BACKGROUND", (0, 1), (-1, -1), WHITE),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, SOFT]),
+            ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+            ("INNERGRID", (0, 0), (-1, -1), 0.4, LINE),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ]))
+        story.extend([scenario_table, Spacer(1, 0.25 * cm)])
+
+    project_types = report.get("project_types")
+    if isinstance(project_types, list) and project_types:
+        story.append(Paragraph("Detected Project Types", style_section))
+        story.append(Paragraph(
+            f"OS Pilot found signals for {escape(', '.join(str(item) for item in project_types))}. "
+            "These labels help explain which cleanup recipes are safe to use.",
+            style_body,
+        ))
+        story.append(Spacer(1, 0.2 * cm))
+
+    recovery_recipes = report.get("recovery_recipes")
+    if isinstance(recovery_recipes, list) and recovery_recipes:
+        recipe_rows = []
+        for recipe in recovery_recipes:
+            if not isinstance(recipe, dict):
+                continue
+            recipe_rows.append([
+                para(recipe.get("path", "Unknown path")),
+                para(recipe.get("project_type", "Unknown")),
+                para(recipe.get("recipe", "No recipe recorded.")),
+            ])
+        if recipe_rows:
+            story.append(Paragraph("Recovery Recipes", style_section))
+            story.append(Paragraph(
+                "Use these commands only if you need to rebuild a quarantined development artifact.",
+                style_small,
+            ))
+            recipe_table = Table(
+                [[
+                    Paragraph("Artifact Path", style_table_header),
+                    Paragraph("Project", style_table_header),
+                    Paragraph("Rebuild Command", style_table_header),
+                ], *recipe_rows],
+                colWidths=[content_w * 0.36, content_w * 0.18, content_w * 0.46],
+                repeatRows=1,
+            )
+            recipe_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), MINT_DARK),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, SOFT]),
+                ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+                ("INNERGRID", (0, 0), (-1, -1), 0.35, LINE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ]))
+            story.extend([recipe_table, Spacer(1, 0.25 * cm)])
+
+    audit = report.get("audit")
+    if isinstance(audit, dict) and audit:
+        audit_rows = [
+            [para(_human_label(str(event_name))), para(count)]
+            for event_name, count in audit.items()
+        ]
+        story.append(Paragraph("Audit Summary", style_section))
+        story.append(Paragraph("A compact count of important local actions recorded by OS Pilot.", style_small))
+        audit_table = Table(audit_rows, colWidths=[content_w * 0.65, content_w * 0.35])
+        audit_table.setStyle(TableStyle([
+            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [WHITE, SOFT]),
+            ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+            ("INNERGRID", (0, 0), (-1, -1), 0.35, LINE),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.extend([audit_table, Spacer(1, 0.25 * cm)])
+
+    if extra_fields:
+        story.append(Paragraph("Report Summary", style_section))
+        friendly_keys = {"cleanup_scenarios", "project_types", "recovery_recipes", "audit"}
+        summary_rows = [
+            [para(_human_label(key), style_label), para(value)]
+            for key, value in extra_fields
+            if key not in friendly_keys
+        ]
+        if summary_rows:
+            summary_table = Table(summary_rows, colWidths=[4.4 * cm, content_w - 4.4 * cm])
+            summary_table.setStyle(TableStyle([
+                ("ROWBACKGROUNDS", (0, 0), (-1, -1), [WHITE, SOFT]),
+                ("BOX", (0, 0), (-1, -1), 0.6, LINE),
+                ("INNERGRID", (0, 0), (-1, -1), 0.35, LINE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]))
+            story.extend([summary_table, Spacer(1, 0.25 * cm)])
+
+    try:
+        before_val = float(health_before)
+        after_val = float(health_after)
+        delta = after_val - before_val
+        sign = "+" if delta >= 0 else ""
+        story.append(Paragraph("Health Change", style_section))
+        bar_width = content_w
+        after_frac = max(0.0, min(1.0, after_val / 100))
+        bar_table = Table([["", ""]], colWidths=[bar_width * after_frac, bar_width * (1 - after_frac)], rowHeights=[10])
+        bar_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (0, 0), SKY if delta >= 0 else AMBER),
+            ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#e7efed")),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.extend([
+            bar_table,
+            Spacer(1, 0.1 * cm),
+            Paragraph(f"{sign}{delta:.1f}% change in health score after cleanup.", style_small),
+            Spacer(1, 0.25 * cm),
+        ])
+    except (TypeError, ValueError):
+        pass
+
+    story.extend([
+        HRFlowable(width="100%", thickness=0.5, color=LINE, spaceBefore=8, spaceAfter=8),
+        Paragraph(
+            "This report was generated locally by OS Pilot. Scan results, audit events, and quarantined files remain on this device.",
+            style_small,
+        ),
+    ])
+
+    doc.build(story, onFirstPage=draw_page_chrome, onLaterPages=draw_page_chrome)
+    return buffer.getvalue()
+
+
+def _build_report_content(report: dict[str, object], format_name: str, generated: str) -> tuple[bytes, str]:
+    if format_name == "html":
+        return _build_report_html(report, generated).encode("utf-8"), "text/html"
+    if format_name == "pdf":
+        return _build_report_pdf(report, generated), "application/pdf"
+    text = "\n".join(f"{key}: {_compact_value(value)}" for key, value in report.items())
+    return text.encode("utf-8"), "text/plain"
+
+
+@app.post("/api/report/export")
+def export_report(body: ReportExportRequest) -> Response:
+    generated = _report_generated_label()
+    report = body.report or {}
+    format_name = body.format.lower()
+    content, media_type = _build_report_content(report, format_name, generated)
+    filename = f"ospilot-report.{format_name if format_name in {'html', 'pdf'} else 'txt'}"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/api/report/export-file", response_model=ReportFileResponse)
+def export_report_file(body: ReportExportRequest) -> ReportFileResponse:
+    generated = _report_generated_label()
+    report = body.report or {}
+    format_name = body.format.lower()
+    if format_name not in {"html", "pdf", "txt"}:
+        format_name = "txt"
+    content, _ = _build_report_content(report, format_name, generated)
+    ensure_data_dirs()
+    filename = _report_filename(format_name)
+    path = REPORTS_DIR / filename
+    path.write_bytes(content)
+    return ReportFileResponse(path=str(path.resolve()), filename=filename, format=format_name)
+
 
 
 @app.post("/api/scan", response_model=ScanResponse)

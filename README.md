@@ -1,96 +1,213 @@
-# OS Pilot
+<div align="center">
 
-OS Pilot is a local-first AI developer workspace recovery agent for the Kaggle AI Agents capstone. It helps students and developers understand laptop slowdowns, identify performance pressure, and safely recover wasted storage from rebuildable project artifacts.
+<!-- Animated Header Banner -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,40:0891b2,100:06b6d4&height=220&section=header&text=OS%20Pilot&fontSize=64&fontColor=ffffff&animation=twinkling&fontAlignY=42&desc=Local-First%20AI%20Developer%20Workspace%20Recovery%20Agent%20for%20the%20Kaggle%20AI%20Agents%20Capstone&descAlignY=65&descSize=16&descColor=a5f3fc" width="100%"/>
+
+<br/>
+
+<!-- Badge Row 1 -->
+<img src="https://img.shields.io/badge/Type-Multi--Agent%20System-06B6D4?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/AI-Groq%20Powered-22C55E?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/Safety-Human%20Approval-F59E0B?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/Storage-Quarantine%20%2B%20Restore-8B5CF6?style=for-the-badge&labelColor=0f172a"/>
+
+<br/><br/>
+
+<!-- Badge Row 2 -->
+<img src="https://img.shields.io/badge/Backend-FastAPI-06B6D4?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/Frontend-React%20%2B%20Tauri-F97316?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/Database-SQLite-3B82F6?style=for-the-badge&labelColor=0f172a"/>
+&nbsp;
+<img src="https://img.shields.io/badge/Platform-Kaggle%20AI%20Agents%20Capstone-34D399?style=for-the-badge&labelColor=0f172a"/>
+
+<br/><br/>
+
+**OS Pilot helps developers understand laptop slowdowns, identify performance pressure, and safely recover wasted storage from rebuildable project artifacts.**
+
+</div>
+
+---
+
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:0891b2,50:06b6d4,100:0e7490&height=3" width="100%"/>
+
+<br/>
+
+<div align="center">
+
+## OS Pilot Multi-Agent Recovery Pipeline
+
+```mermaid
+flowchart TD
+    A["User selects a repo, workspace folder, or home scan scope"] --> B["React / Tauri Interface<br/>Native folder picker, threshold slider, scan controls, Plan & Approval UI"]
+    B --> C["FastAPI Scan Session<br/>Single-pass walker, project detection, rebuildability scoring, workspace profile"]
+    C --> D["Multi-Agent Orchestration<br/>Monitor, Diagnosis, Maintenance Planner, Risk & Safety, Report"]
+    D --> E{"Human Approval Gate"}
+    E -->|"Conservative / Balanced / Deep Review"| F["Restricted MCP-Style Tools<br/>Validate action ids, recheck safety, block risky paths"]
+    E -->|"Not approved"| G["Dry-Run Report<br/>Advice, risks, and scenario estimates"]
+    F --> H["Quarantine + Audit Log<br/>Move instead of delete, restore support, SQLite history, feedback"]
+    H --> I["Output<br/>Reclaimed space, recovery recipes, and audit evidence"]
+
+    classDef user fill:#0f172a,stroke:#06b6d4,color:#ffffff;
+    classDef app fill:#ecfeff,stroke:#0891b2,color:#0f172a;
+    classDef agent fill:#f0fdf4,stroke:#22c55e,color:#0f172a;
+    classDef safety fill:#fffbeb,stroke:#f59e0b,color:#0f172a;
+    classDef output fill:#f5f3ff,stroke:#8b5cf6,color:#0f172a;
+
+    class A user;
+    class B,C app;
+    class D agent;
+    class E,F,G safety;
+    class H,I output;
+```
+
+</div>
+
+---
+
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:0891b2,50:06b6d4,100:0e7490&height=3" width="100%"/>
 
 ## Problem
 
-Developer laptops often fill up with old `node_modules`, virtual environments, build artifacts, Python caches, notebook checkpoints, and large forgotten files. Heavy background apps can also create RAM pressure. Generic cleaner apps can find large folders, but they usually do not understand whether a development artifact is safely rebuildable from `package-lock.json`, `requirements.txt`, `pyproject.toml`, notebooks, or other project evidence.
+Developer laptops quietly fill up with old `node_modules`, virtual environments, build artifacts, Python caches, notebook checkpoints, and large forgotten files. Heavy background apps can also create RAM pressure.
+
+Generic cleaner apps can find large folders, but they usually do not understand whether a development artifact is safely rebuildable from `package-lock.json`, `requirements.txt`, `pyproject.toml`, notebooks, or other project evidence.
+
+---
 
 ## Solution
 
-OS Pilot observes local system metrics, scans a user-selected folder or the user-owned home scope, detects project type, scores artifact rebuildability, creates recovery recipes, validates safety with hard-coded rules, waits for human approval, and moves approved cleanup items to quarantine instead of deleting them.
+OS Pilot observes local system metrics, scans a user-selected folder or user-owned home scope, detects project type, scores artifact rebuildability, creates recovery recipes, validates safety with hard-coded rules, waits for human approval, and moves approved cleanup items to quarantine instead of deleting them.
 
-The current workflow is the four-part loop from the research report: profile the selected workspace or user-owned scan scope, rank safe reclaim opportunities, compare Conservative / Balanced / Deep Review cleanup scenarios, then execute only approved items through quarantine with full restore history. Each scan also stores a compact local snapshot so the agent can explain workspace growth or shrinkage on later scans.
+The workflow is a four-part loop: profile the workspace, rank safe reclaim opportunities, compare Conservative / Balanced / Deep Review cleanup scenarios, then execute only approved items through quarantine with full restore history. Each scan stores a compact local snapshot so the agent can explain workspace growth or shrinkage over time.
+
+---
 
 ## What Makes It Different From A Cleaner
 
-A normal cleaner finds junk. OS Pilot understands developer workspaces:
+<table>
+<tr>
+<td width="50%">
 
-- Detects Node, Next.js, Python, Jupyter, Rust, Go, Java, Ruby, PHP, Dart/Flutter, and ML-style project context.
-- Checks manifest/lockfile evidence such as `package-lock.json`, `requirements.txt`, `pyproject.toml`, and notebooks.
-- Assigns rebuildability: High, Medium, Low, Unknown, or Not Rebuildable.
-- Shows exact recovery recipes such as `npm ci` or `python -m venv .venv && pip install -r requirements.txt`.
-- Keeps large model/checkpoint-style files as manual review instead of pretending they are safe junk.
-- Links live processes back to the selected workspace and blocks quarantine for active paths.
-- Simulates cleanup scenarios before execution so users can compare estimated reclaimed space.
-- Produces structured agent output: summary, top risks, recommended scenario, urgency level, and confidence.
-- Learns from restore feedback by lowering future confidence for similar artifacts the user chose to keep.
+### AI Workspace Intelligence
 
-## Architecture
+- **Project-aware scanning** for Node, Next.js, Python, Jupyter, Rust, Go, Java, Ruby, PHP, Dart/Flutter, and ML-style folders
+- **Manifest evidence checks** using files such as `package-lock.json`, `requirements.txt`, `pyproject.toml`, and notebooks
+- **Rebuildability scoring** across High, Medium, Low, Unknown, and Not Rebuildable
+- **Recovery recipes** such as `npm ci` or `python -m venv .venv && pip install -r requirements.txt`
+- **Scan-delta memory** to explain workspace growth or shrinkage between runs
+- **Restore feedback learning** that lowers confidence for artifact types users choose to restore
 
-```mermaid
-flowchart LR
-    User["User selects real repo folder"] --> UI["React / Tauri UI"]
-    UI --> API["FastAPI scan session"]
-    API --> Agents["Monitor, Diagnosis, Planner, Safety agents"]
-    Agents --> Plan["Scenarios + approval queue"]
-    Plan --> Gate{"Human approves?"}
-    Gate -- "No" --> Report["Advice + dry-run report"]
-    Gate -- "Yes" --> Tools["Restricted MCP tools"]
-    Tools --> Quarantine["Quarantine + restore"]
-    Quarantine --> Audit["Audit log + final report"]
+</td>
+<td width="50%">
+
+### Safety-First Automation
+
+- **No arbitrary shell access**; actions go through restricted local tools
+- **No automatic permanent delete**; approved items move to quarantine first
+- **No automatic process killing**; active project-linked paths are protected
+- **Symlink and identity revalidation** immediately before quarantine
+- **Server-governed Safe Autopilot** for stale, rebuildable, manifest-backed artifacts only
+- **Audit logs and restore history** for every important cleanup action
+
+</td>
+</tr>
+</table>
+
+---
+
+## Demo Video
+
+```md
+[Watch the OS Pilot demo on YouTube](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
 ```
 
-Main pieces:
+---
 
-- JavaScript UI (React + Vite + Tailwind)
-- FastAPI backend
-- Restricted MCP-style Python tools
-- Multi-agent orchestration
-- Groq-backed structured diagnosis with deterministic fallback
-- Rebuildability-aware project scanner and recovery recipes
-- Workspace profiler, scan-delta memory, dormancy ranking, scenario planner, process linkage, and before/after simulator
-- SQLite audit, quarantine, feedback, and scan snapshot storage
+## Product Screenshots
 
-OS Pilot is **on-demand by default**. Users can optionally enable a **weekly read-only scan** from the UI, which installs a local scheduler (`launchd` on macOS or `cron` on Linux). Scheduled scans write human-readable reports and never quarantine or delete files automatically.
+<div align="center">
 
-OS Pilot also includes **Safe Autopilot**. After a scan, the backend automatically ranks cleanup candidates and marks only stale, rebuildable, manifest-backed artifacts as Autopilot-ready. When the user clicks **Run Safe Autopilot**, the browser sends only the scan session id; the backend chooses the eligible items from the server-side plan and quarantines them with audit logs. The browser cannot submit its own cleanup plan.
+<img src="docs/assets/screenshots/os-pilot-dashboard.webp" alt="OS Pilot system overview dashboard" width="100%"/>
 
-For a desktop-style experience, OS Pilot also includes a Tauri shell so the React UI can open in its own app window instead of a browser tab.
+<br/><br/>
 
-## Course Concepts Demonstrated
+<table>
+<tr>
+<td width="50%">
+<img src="docs/assets/screenshots/os-pilot-plan.webp" alt="OS Pilot plan and approval workflow" width="100%"/>
+</td>
+<td width="50%">
+<img src="docs/assets/screenshots/os-pilot-report.webp" alt="OS Pilot quarantine and cleaning reports" width="100%"/>
+</td>
+</tr>
+</table>
 
-OS Pilot demonstrates more than the minimum three course concepts required by the capstone rubric:
+</div>
 
-| Concept | Where it is demonstrated |
+---
+
+## Kaggle Capstone Concepts Demonstrated
+
+<div align="center">
+
+| Concept | Where It Is Demonstrated |
 | --- | --- |
-| Agent / multi-agent system | Code: `agents/orchestrator_agent.py` coordinates Monitor, Diagnosis, Maintenance Planner, Risk & Safety, and Report agents. |
-| MCP server / restricted tools | Code: `mcp_server/server.py` exposes a narrow allowlist of local tools instead of arbitrary shell access. |
-| Antigravity | Video: launch the backend and frontend from Antigravity's terminal before switching to the app demo. |
-| Security features | Code and video: server-side scan sessions, protected-path blocking, symlink blocking, identity revalidation, active-process blocks, quarantine, restore, and audit logs. |
-| Deployability | Video and docs: local web run commands plus the Tauri desktop shell documented in `docs/desktop_app.md` and `docs/deployability.md`. |
-| Agent skills | Code: `agents/skills.py` names the observation, diagnosis, planning, safety, and reporting skills used by the multi-agent pipeline. |
+| **Agent / Multi-Agent System** | `agents/orchestrator_agent.py` coordinates Monitor, Diagnosis, Maintenance Planner, Risk & Safety, and Report agents |
+| **MCP Server / Restricted Tools** | `mcp_server/server.py` exposes a narrow allowlist of local tools instead of arbitrary shell access |
+| **Antigravity** | Backend and frontend can be launched from Antigravity's terminal during the demo workflow |
+| **Security Features** | Server-side scan sessions, protected-path blocking, symlink blocking, identity revalidation, active-process blocks, quarantine, restore, and audit logs |
+| **Deployability** | Local web run commands plus the Tauri desktop shell documented in `docs/desktop_app.md` and `docs/deployability.md` |
+| **Agent Skills** | `agents/skills.py` defines the observation, diagnosis, planning, safety, and reporting skills used by the pipeline |
+
+</div>
 
 See [Course Concepts](docs/course_concepts.md) for the judge-facing mapping.
+
+---
+
+## Tech Stack
+
+<div align="center">
+
+| Technology | Purpose |
+| --- | --- |
+| **React + Vite + Tailwind** | Frontend UI |
+| **Tauri** | Desktop app shell |
+| **FastAPI** | Backend API and scan sessions |
+| **Groq AI** | Structured diagnosis with deterministic fallback |
+| **Restricted MCP-style tools** | Safe local scanning, validation, quarantine, restore, and reporting actions |
+| **SQLite** | Audit, quarantine, feedback, and scan snapshot storage |
+| **Python 3** | Core backend, agent, scanner, and safety logic |
+
+</div>
+
+---
 
 ## Project Structure
 
 ```text
-.
+ospilot-agent/
 ├── agents/             # AI agents for monitoring, diagnosis, planning, and safety
 ├── api/                # FastAPI backend endpoints and session management
 ├── core/               # Core logic for workspace profiling, scanning, and metrics
-├── docs/               # Project documentation (architecture, safety model, etc.)
-├── frontend/           # React + Vite + Tailwind UI
+├── docs/               # Architecture, safety model, deployability, and writeup docs
+├── frontend/           # React + Vite + Tailwind UI and Tauri desktop shell
 ├── mcp_server/         # Restricted MCP-style Python tools
-├── scripts/            # Utility scripts (e.g., weekly_scan.py)
-├── tests/              # Test suite for backend and agent safety
+├── scripts/            # Utility scripts such as weekly_scan.py
+├── tests/              # Backend, agent, scanner, and safety tests
 ├── config.py           # Application configuration
-├── README.md           # This file
+├── README.md           # Project overview
 └── requirements.txt    # Python dependencies
 ```
 
-## Setup
+---
+
+## Setup & Run
 
 ### Backend
 
@@ -117,124 +234,107 @@ cd frontend
 npm install
 ```
 
-## Run
+### Run The App
 
-Start the backend and frontend in two separate terminals. For the submission video, open these terminals inside **Antigravity** so the video demonstrates that course concept directly.
-
-Terminal 1 — API:
+Start the backend and frontend in two separate terminals. The same commands work in a standard shell or in Antigravity's terminal.
 
 ```bash
+# Terminal 1 - Backend
 source .venv/bin/activate
 uvicorn api.main:app --reload --port 8000
-```
 
-Terminal 2 — UI:
-
-```bash
+# Terminal 2 - Frontend
 cd frontend
 npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
 
-Quick command summary:
+### Desktop Shell
 
 ```bash
-# Backend
-source .venv/bin/activate
-uvicorn api.main:app --reload --port 8000
-
-# Frontend
 cd frontend
-npm run dev
+npm run desktop:dev
 ```
 
-### Weekly scan (opt-in)
+See [Desktop App](docs/desktop_app.md) for the Tauri build path.
 
-In the UI, use **Enable weekly scan** to install a local scheduler:
+---
 
-- **macOS:** `launchd` user agent (`~/Library/LaunchAgents/com.ospilot.weekly-scan.plist`)
-- **Linux:** user `crontab` entry
+## Scanning Real Local Data
 
-Weekly scans are **read-only**. They write Markdown and HTML reports to `.ospilot_data/reports/` and do not quarantine or delete anything until you approve cleanup in the UI.
+1. Open [http://localhost:5173](http://localhost:5173), or use the desktop shell.
+2. Use the large file threshold slider from 30 MB to 5 GB. The default is 30 MB.
+3. Click **Scan a Specific Folder** to open the native Mac folder picker and scan the selected path.
+4. Click **Scan Whole PC** to scan your user-owned computer space while OS protected folders remain blocked.
 
-Manual CLI run:
+The scan uses a single-pass optimized walker that prunes junk directories such as `node_modules`, `.venv`, `__pycache__`, and build outputs before recursing into them, making it practical on large developer workspaces.
+
+### Optional Demo Workspace
+
+```bash
+python demo/create_demo_workspace.py
+```
+
+The script creates safe fake Node, Python, notebook, cache, build, and large-file artifacts under `demo/demo_workspace/`.
+
+---
+
+## Plan & Approval UI
+
+After a scan, the **Plan & Approval** tab shows:
+
+- **Workspace profile** with detected project types, manifest markers, artifact counts, candidate space, and linked live process signals
+- **Structured agent diagnosis** with summary, top risks, urgency, recommended scenario, confidence, and previous-scan delta
+- **Cleanup scenarios** for Conservative, Balanced, and Deep Review estimates
+- **Search and filtering** for large result sets by folder, reason, or risk
+- **Cleanup action table** with path, size, risk, confidence, reason, status, and approval checkboxes
+- **Rebuildability-aware planning** with project type, manifest evidence, rebuildability, and recovery recipe
+- **Safe Autopilot** for backend-approved stale rebuildable artifacts only
+- **Manual Review** separation for advisory, blocked, protected, or risky items
+- **Before/after reporting** with scenario estimates, quarantine counts, recovery recipes, and audit summary
+
+---
+
+## Weekly Scan
+
+OS Pilot is on-demand by default. Users can optionally enable a weekly read-only scan from the UI.
+
+- **macOS:** installs a `launchd` user agent at `~/Library/LaunchAgents/com.ospilot.weekly-scan.plist`
+- **Linux:** installs a user `crontab` entry
+- **Reports:** writes Markdown and HTML reports to `.ospilot_data/reports/`
+- **Safety:** weekly scans never quarantine or delete files automatically
+
+Manual run:
 
 ```bash
 source .venv/bin/activate
 python scripts/weekly_scan.py
 ```
 
-## Scanning Real Local Data
-
-1. Open [http://localhost:5173](http://localhost:5173), or use the desktop shell described in [Desktop App](docs/desktop_app.md).
-2. Use the folder explorer to browse major locations such as Home, Desktop, Documents, Downloads, Applications, and Volumes. You can still paste a path directly; pasted paths can include `~`, quotes, `file://` URLs, or a trailing comma.
-3. Use the **large file threshold slider** (30 MB - 5 GB) to set the minimum file size to report. Default is 30 MB.
-4. Click **Scan Folder** to scan the selected path.
-5. Click **Home Scan** to scan the user-owned home area (`~`) while continuing to skip protected OS folders.
-
-The scan uses a single-pass optimised walker that prunes junk directories (`node_modules`, `.venv`, `__pycache__`, etc.) before recursing into them, making it practical on large trees with hundreds of thousands of files.
-
-### Optional Demo Workspace
-
-If you want a safe reproducible scan target instead of using personal folders, create the bundled demo workspace:
-
-```bash
-python demo/create_demo_workspace.py
-```
-
-The script creates small fake Node, Python, notebook, cache, build, and large-file artifacts under `demo/demo_workspace/`. You can then scan that folder from the UI.
-
-### Submission Demo Path
-
-For the Kaggle capstone video, the recommended demo is a real local GitHub repositories folder with accumulated `node_modules`, virtual environments, caches, and build outputs. This shows OS Pilot working on meaningful local data. The demo should show the scan result, workspace profile, rebuildability evidence, scenario estimates, approval step, quarantine, restore, and final report.
-
-## Plan & Approval UI
-
-After a scan the **Plan & Approval** tab shows:
-
-- **Workspace profile** — detected project types, manifest markers, artifact counts, candidate space, and linked live process signals.
-- **Structured agent diagnosis** — summary, top risks, urgency level, recommended scenario, confidence, and previous-scan delta when available.
-- **Cleanup scenarios** — Conservative, Balanced, and Deep Review estimates that can be loaded into the approval queue.
-- **Search/filter** — narrow large result sets by folder, reason, or risk.
-- **Cleanup action table** — path, size, risk, confidence, reason, status, and approval checkboxes.
-- **Rebuildability-aware planning** — reasons include project type, manifest evidence, rebuildability, and recovery recipe.
-- **Safe Autopilot** — one-click quarantine for backend-approved stale rebuildable artifacts only.
-- **Manual Review** — advisory and blocked/protected items are separated from reversible cleanup actions.
-- **Before/after reporting** — report export includes scenario estimates, quarantine counts, recovery recipes, and audit summary.
-
-In the app:
-
-1. Browse to a real folder or choose **Home Scan** for a safe user-owned scan scope.
-2. Click **Scan Folder**.
-3. Review count summary, search/filter results, and sort results by size or folder.
-4. Approve selected cleanup items.
-5. Quarantine approved items.
-6. Restore an item from quarantine.
-7. Review the report and audit events.
-8. Export HTML/PDF evidence if needed for submission.
+---
 
 ## Safety Guarantees
 
-- No arbitrary shell access.
-- No automatic permanent delete.
-- No automatic process killing.
-- Running project-linked processes block quarantine for the matching path.
-- No registry edits or OS repair.
-- No unsafe raw full-disk scan.
-- Folder selection is user-driven through the in-app explorer, and **Home Scan** maps to the user-owned home area while protected OS paths remain blocked.
-- Approved cleanup actions are rechecked immediately before quarantine: symlink paths, changed filesystem identities, and newly active project-linked processes are blocked.
-- Quarantine records preserve artifact and project metadata so restore feedback can tune future confidence.
-- Cleanup approvals use a server-side scan session, not a browser-submitted cleanup plan.
-- Scenario loading only selects backend-issued action ids; execution revalidates those ids before moving files.
-- Safe Autopilot is server-governed: the UI cannot choose arbitrary files for automated quarantine.
-- Optional weekly scan is opt-in only and report-only until you approve cleanup in the UI.
-- Protected system paths are blocked.
-- Cleanup requires human approval.
-- Quarantined items can be restored.
-- Permanent removal is available only from quarantine after the item has already been moved out of its original location.
-- Every important action is logged.
-- External LLM prompts use redacted, aggregated scan summaries rather than raw full paths or process command lines.
+- No arbitrary shell access
+- No automatic permanent delete
+- No automatic process killing
+- No registry edits or OS repair
+- No unsafe raw full-disk scan
+- Protected system paths are blocked
+- Folder selection is user-driven through the app
+- Running project-linked processes block quarantine for matching paths
+- Approved cleanup actions are rechecked immediately before quarantine
+- Symlink paths and changed filesystem identities are blocked at execution time
+- Cleanup approvals use server-side scan sessions, not browser-submitted cleanup plans
+- Scenario loading only selects backend-issued action ids
+- Safe Autopilot is server-governed and cannot be pointed at arbitrary files by the UI
+- Quarantined items can be restored
+- Permanent removal is available only after quarantine
+- Every important action is logged
+- External LLM prompts use redacted, aggregated scan summaries
+
+---
 
 ## Project Docs
 
@@ -246,10 +346,38 @@ In the app:
 - [Writeup](docs/writeup.md)
 - [Desktop App](docs/desktop_app.md)
 
-## Kaggle Submission Links
+---
 
-Fill these in after publishing the final submission materials:
+## License
 
-- Kaggle writeup: see [Writeup](docs/writeup.md)
-- YouTube demo:
-- Screenshots/GIF:
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:0891b2,50:06b6d4,100:0e7490&height=3" width="100%"/>
+
+<div align="center">
+
+<br/>
+
+[![GitHub](https://img.shields.io/badge/GitHub-ospilot--agent-181717?style=for-the-badge&logo=github&labelColor=0f172a)](https://github.com/omerfarooq223/ospilot-agent)
+&nbsp;
+[![Portfolio](https://img.shields.io/badge/Portfolio-omerfarooq223.github.io-22C55E?style=for-the-badge&labelColor=0f172a)](https://omerfarooq223.github.io)
+&nbsp;
+[![Kaggle](https://img.shields.io/badge/Kaggle-AI%20Agents%20Capstone-06B6D4?style=for-the-badge&labelColor=0f172a)](https://kaggle.com)
+
+<br/>
+
+[![Demo Video](https://img.shields.io/badge/Demo%20Video-Add%20YouTube%20Link-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](#demo-video)
+&nbsp;
+[![Course Concepts](https://img.shields.io/badge/Course%20Concepts-Implementation%20Map-06B6D4?style=for-the-badge&labelColor=0f172a)](docs/course_concepts.md)
+&nbsp;
+[![Safety Model](https://img.shields.io/badge/Safety%20Model-Read%20Docs-F59E0B?style=for-the-badge&labelColor=0f172a)](docs/safety_model.md)
+
+<br/>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0e7490,60:0891b2,100:06b6d4&height=120&section=footer&animation=twinkling" width="100%"/>
+
+**Star this repo if OS Pilot helped you recover a cleaner developer workspace.**
+
+</div>

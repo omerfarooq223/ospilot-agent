@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Allow the main OS Pilot window to open a native folder picker.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "dialog:allow-open", "shell:allow-open"]
 }

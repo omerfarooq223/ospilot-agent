@@ -68,7 +68,7 @@ Observe -> Diagnose -> Plan -> Validate -> Approve -> Quarantine -> Report -> Re
 | --- | --- |
 | Agent / multi-agent system | `agents/orchestrator_agent.py` coordinates Monitor, Diagnosis, Planner, Safety, and Report agents. `agents/skills.py` defines the role-specific agent skills. |
 | MCP server / restricted tools | `mcp_server/server.py` exposes an allowlist of local tools. The agent can call specific scan, validation, quarantine, restore, and reporting tools, but cannot run arbitrary shell commands. |
-| Antigravity | The demo video launches the backend and frontend from Antigravity's terminal before switching to the running app. |
+| Antigravity | The backend and frontend can be launched from Antigravity's terminal using the same commands documented in the README. |
 | Security features | Protected-path blocking, symlink blocking, server-side scan sessions, execution-time path identity revalidation, active-process blocks, quarantine, restore, and audit logs. |
 | Deployability | The README documents local backend/frontend startup. `docs/deployability.md` and `docs/desktop_app.md` document the local web app and Tauri desktop shell. |
 | Agent skills | Observation, diagnosis, planning, safety validation, and reporting are represented explicitly in code and audit metadata. |
@@ -137,11 +137,11 @@ Each candidate receives:
 
 For example, `node_modules` next to `package-lock.json` can be explained with a recovery recipe like `npm ci`. A Python `.venv` next to `requirements.txt` can be rebuilt with a virtual environment and install command. Unknown large files and model/checkpoint-style artifacts remain manual-review items.
 
-## Demo Flow
+## Typical Workflow
 
-The submission demo shows a real local repository scan:
+A typical real local repository scan follows this flow:
 
-1. Launch OS Pilot from Antigravity's terminal.
+1. Launch OS Pilot from a terminal, including Antigravity's terminal when used as the development environment.
 2. Open the React app at `http://localhost:5173`.
 3. Select a real GitHub repositories folder or run Home Scan.
 4. Adjust the large-file threshold and show folder ignore controls.
@@ -152,9 +152,7 @@ The submission demo shows a real local repository scan:
 9. Quarantine approved items.
 10. Show the report, audit events, and recovery evidence.
 11. Restore one item from quarantine to prove rollback.
-12. Mention deployability through README commands and the Tauri desktop shell.
-
-The video stays under five minutes and focuses on problem, agent value, architecture, security, deployability, and a working live demo.
+12. Export a report or run the Tauri desktop shell when a desktop-window workflow is preferred.
 
 ## Tech Stack
 

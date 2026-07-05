@@ -92,6 +92,13 @@ export async function exportReport(report, format = "html") {
   return response.blob();
 }
 
+export function exportReportFile(report, format = "pdf") {
+  return request("/api/report/export-file", {
+    method: "POST",
+    body: JSON.stringify({ report, format }),
+  });
+}
+
 export function listQuarantine() {
   return request("/api/quarantine");
 }

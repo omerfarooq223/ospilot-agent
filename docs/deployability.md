@@ -1,6 +1,6 @@
 # Deployability
 
-OS Pilot is designed to be reproducible locally for judging and packageable as a desktop app.
+OS Pilot is designed to be reproducible locally and packageable as a desktop app.
 
 ## Local Web App
 

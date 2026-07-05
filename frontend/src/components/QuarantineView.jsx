@@ -16,7 +16,6 @@ export default function QuarantineView({ records, onRestore, loadingId, onPerman
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-2xl font-bold text-white">Quarantined Items</h2>
-            <p className="text-sm font-medium text-slate-400">Safe storage for flagged files awaiting review.</p>
           </div>
           <span className="mono text-sm font-bold text-mint-300">{activeRecords.length} active</span>
         </div>

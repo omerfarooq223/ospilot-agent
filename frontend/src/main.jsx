@@ -37,9 +37,24 @@ const TABS = [
   { id: "settings", label: "Settings", icon: "gear" },
 ];
 
-const USER_NAME = "Muhammad Omer Farooq";
-const USER_INITIALS = "MO";
+const USER_NAME = "Muhammad Umar Farooq";
+const USER_INITIALS = "MU";
 const MESSAGE_DISMISS_MS = 5000;
+const GITHUB_URL = "https://github.com/omerfarooq223/ospilot-agent";
+const PORTFOLIO_URL = "https://omerfarooq223.github.io";
+
+async function openExternalUrl(url) {
+  try {
+    if (window.__TAURI_INTERNALS__) {
+      const mod = await import("@tauri-apps/plugin-shell");
+      await mod.open(url);
+      return;
+    }
+  } catch (_) {
+    // Browser fallback below.
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
 
 function Icon({ name }) {
   const paths = {
@@ -53,11 +68,75 @@ function Icon({ name }) {
     plus: "M12 5v14M5 12h14",
     sun: "M12 4V2m0 20v-2m8-8h2M2 12h2m14.95-6.95 1.4-1.4M3.65 20.35l1.4-1.4m0-13.9-1.4-1.4m16.7 16.7-1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z",
     moon: "M21 14.6A7.8 7.8 0 0 1 9.4 3 8.8 8.8 0 1 0 21 14.6Z",
+    external: "M14 3h7v7M21 3l-9 9M5 5h5M5 5v14h14v-5",
+    x: "M6 6l12 12M18 6 6 18",
+    github: "M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22",
   };
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
       <path d={paths[name]} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function ProfileModal({ onClose }) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close profile links" onClick={onClose} />
+      <section className="relative w-full max-w-[39rem] overflow-hidden rounded-lg border border-mint-500/30 dark:border-mint-300/30 bg-white dark:bg-ink-950 px-5 py-8 shadow-[0_24px_90px_rgba(0,0,0,0.7)] sm:px-10 sm:py-10">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-1 w-64 -translate-x-1/2 bg-mint-300 shadow-[0_0_36px_rgba(63,214,187,0.9)]" />
+        <button type="button" className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-ink-950 dark:hover:bg-ink-850 dark:hover:text-white" onClick={onClose} title="Close">
+            <Icon name="x" />
+        </button>
+
+        <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+          <div className="grid h-28 w-28 place-items-center rounded-full border-2 border-mint-200 bg-mint-300 text-4xl font-black text-ink-950 shadow-[0_0_54px_rgba(63,214,187,0.38)] sm:h-32 sm:w-32 sm:text-5xl">
+            {USER_INITIALS}
+          </div>
+
+          <h3 id="profile-title" className="mt-7 font-display text-2xl font-black tracking-tight text-ink-950 dark:text-white sm:text-4xl whitespace-nowrap">
+            {USER_NAME}
+          </h3>
+          <p className="mono mt-5 text-sm font-black uppercase tracking-[0.55em] text-mint-500 dark:text-mint-300 sm:text-base">
+            AI Engineer
+          </p>
+
+          <div className="mt-7 w-full rounded-md border border-mint-500/20 dark:border-mint-300/20 bg-slate-50 dark:bg-ink-900/80 px-5 py-5">
+            <p className="text-base font-bold text-slate-800 dark:text-slate-200">OS Pilot Developer</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+              Building a local-first AI workspace recovery agent for safer scans, approvals, quarantine, restore, and report export.
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-7 w-full max-w-2xl space-y-4">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-3 rounded-md px-5 py-4 text-base font-black transition bg-black text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
+            onClick={() => openExternalUrl(GITHUB_URL)}
+          >
+            <Icon name="github" />
+            <span>GitHub Repository</span>
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-mint-500/70 dark:border-mint-300/70 bg-mint-500/10 dark:bg-mint-300/10 px-5 py-4 text-base font-black text-mint-500 dark:text-mint-300 transition hover:bg-mint-500/20 dark:hover:bg-mint-300/20"
+            onClick={() => openExternalUrl(PORTFOLIO_URL)}
+          >
+            <Icon name="external" />
+            <span>Visit Developer Portfolio</span>
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -88,6 +167,7 @@ function App() {
   const [scanHistory, setScanHistory] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState(() => localStorage.getItem("os-pilot-theme") || "dark");
+  const [profileOpen, setProfileOpen] = useState(false);
   const activeScanJobRef = useRef(null);
 
   function resetScanProgress() {
@@ -482,21 +562,18 @@ function App() {
                   <Icon name={theme === "dark" ? "sun" : "moon"} />
                   <span className="hidden sm:inline">{theme === "dark" ? "Light" : "Dark"}</span>
                 </button>
+                <span className="mono hidden rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:inline-flex">
+                  {fallback ? "NODE_01_LOCAL" : "System Active"}
+                </span>
                 <div className="hidden h-8 border-l border-ink-700 sm:block" />
                 <button
                   type="button"
                   className="flex items-center gap-3 text-left"
-                  title="Open profile settings"
-                  onClick={() => {
-                    setTab("settings");
-                    setMessage("Opened your local profile and settings.");
-                  }}
+                  title="Open profile links"
+                  onClick={() => setProfileOpen(true)}
                 >
                   <div className="hidden text-right sm:block">
                     <p className="text-sm font-bold text-white">{USER_NAME}</p>
-                    <p className="mono text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      {fallback ? "NODE_01_LOCAL" : "System Active"}
-                    </p>
                   </div>
                   <div className="grid h-9 w-9 place-items-center rounded-md border border-ink-700 bg-ink-850 text-sm font-bold text-mint-200">
                     {USER_INITIALS}
@@ -595,6 +672,7 @@ function App() {
           </div>
         </main>
       </div>
+      {profileOpen ? <ProfileModal onClose={() => setProfileOpen(false)} /> : null}
     </div>
   );
 }
