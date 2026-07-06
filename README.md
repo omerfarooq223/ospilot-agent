@@ -134,7 +134,7 @@ The workflow is a four-part loop: profile the workspace, rank safe reclaim oppor
 
 <div align="center">
 
-[![Watch the OS Pilot demo on YouTube](https://img.shields.io/badge/Watch%20Demo-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](https://www.youtube.com/watch?v=0wUEN_k9MLs)
+[![Watch the OS Pilot demo on YouTube](https://img.shields.io/badge/Watch%20Demo-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](https://www.youtube.com/watch?v=4eCrRvjovCs)
 
 </div>
 
@@ -391,7 +391,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 <br/>
 
-[![Demo Video](https://img.shields.io/badge/Demo%20Video-Watch%20on%20YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](https://www.youtube.com/watch?v=0wUEN_k9MLs)
+[![Demo Video](https://img.shields.io/badge/Demo%20Video-Watch%20on%20YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](https://www.youtube.com/watch?v=4eCrRvjovCs)
 &nbsp;
 [![Course Concepts](https://img.shields.io/badge/Course%20Concepts-Implementation%20Map-06B6D4?style=for-the-badge&labelColor=0f172a)](docs/course_concepts.md)
 &nbsp;
