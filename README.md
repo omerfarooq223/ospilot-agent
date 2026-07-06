@@ -43,14 +43,14 @@
 
 ```mermaid
 flowchart TD
-    A["User selects a repo, workspace folder, or home scan scope"] --> B["React / Tauri Interface<br/>Native folder picker, threshold slider, scan controls, Plan & Approval UI"]
-    B --> C["FastAPI Scan Session<br/>Single-pass walker, project detection, rebuildability scoring, workspace profile"]
-    C --> D["Multi-Agent Orchestration<br/>Monitor, Diagnosis, Maintenance Planner, Risk & Safety, Report"]
-    D --> E{"Human Approval Gate"}
-    E -->|"Conservative / Balanced / Deep Review"| F["Restricted MCP-Style Tools<br/>Validate action ids, recheck safety, block risky paths"]
-    E -->|"Not approved"| G["Dry-Run Report<br/>Advice, risks, and scenario estimates"]
-    F --> H["Quarantine + Audit Log<br/>Move instead of delete, restore support, SQLite history, feedback"]
-    H --> I["Output<br/>Reclaimed space, recovery recipes, and audit evidence"]
+    A["Select Scan Target"] --> B["Desktop Scan UI"]
+    B --> C["FastAPI Scan Session"]
+    C --> D["Multi-Agent Planner"]
+    D --> E{"Human Approval"}
+    E -->|Approved| F["Restricted Tools"]
+    E -->|Skipped| G["Dry-Run Report"]
+    F --> H["Quarantine + Audit"]
+    H --> I["Recovery Output"]
 
     classDef user fill:#0f172a,stroke:#06b6d4,color:#ffffff;
     classDef app fill:#ecfeff,stroke:#0891b2,color:#0f172a;
@@ -64,6 +64,16 @@ flowchart TD
     class E,F,G safety;
     class H,I output;
 ```
+
+| Stage | What Happens |
+| --- | --- |
+| **Select Scan Target** | Choose a specific folder with the native Mac picker or run a whole-PC user-space scan |
+| **Desktop Scan UI** | Set file-size threshold and start the scan from the React + Tauri interface |
+| **FastAPI Scan Session** | Walk files, detect project evidence, score rebuildability, and profile workspace pressure |
+| **Multi-Agent Planner** | Monitor, Diagnosis, Maintenance Planner, Risk & Safety, and Report agents build the cleanup plan |
+| **Human Approval** | Compare Conservative, Balanced, and Deep Review scenarios before anything moves |
+| **Restricted Tools** | Validate action ids, recheck safety, block risky paths, and quarantine only approved items |
+| **Recovery Output** | Show reclaimed space, recovery recipes, restore history, and audit evidence |
 
 </div>
 
@@ -123,7 +133,7 @@ The workflow is a four-part loop: profile the workspace, rank safe reclaim oppor
 ## Demo Video
 
 ```md
-[Watch the OS Pilot demo on YouTube](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[Watch the OS Pilot demo on YouTube](https://www.youtube.com/watch?v=0wUEN_k9MLs)
 ```
 
 ---
@@ -348,6 +358,17 @@ python scripts/weekly_scan.py
 
 ---
 
+## Project Team
+
+| Role | GitHub |
+| --- | --- |
+| Team Lead | [@omerfarooq223](https://github.com/omerfarooq223) |
+| Project Partner | [@Sobanshahid10](https://github.com/Sobanshahid10) |
+| Project Partner | [@haseebarif11](https://github.com/haseebarif11) |
+| Project Partner | [@mabdullahab614-alt](https://github.com/mabdullahab614-alt) |
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
@@ -368,7 +389,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 <br/>
 
-[![Demo Video](https://img.shields.io/badge/Demo%20Video-Add%20YouTube%20Link-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](#demo-video)
+[![Demo Video](https://img.shields.io/badge/Demo%20Video-Watch%20on%20YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&labelColor=0f172a)](https://www.youtube.com/watch?v=0wUEN_k9MLs)
 &nbsp;
 [![Course Concepts](https://img.shields.io/badge/Course%20Concepts-Implementation%20Map-06B6D4?style=for-the-badge&labelColor=0f172a)](docs/course_concepts.md)
 &nbsp;
